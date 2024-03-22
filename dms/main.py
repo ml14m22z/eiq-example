@@ -16,7 +16,7 @@ from utils import *
 
 MODEL_PATH = pathlib.Path("../models/")
 DETECT_MODEL = "face_detection_front_128_full_integer_quant.tflite"
-LANDMARK_MODEL = "face_landmark_192_integer_quant.tflite"
+LANDMARK_MODEL = "face_landmark_192_full_integer_quant.tflite"
 EYE_MODEL = "iris_landmark_quant.tflite"
 
 # turn on camera

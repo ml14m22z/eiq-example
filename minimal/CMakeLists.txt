@@ -42,3 +42,13 @@ add_executable(minimal
 target_link_libraries(minimal
   tensorflow-lite
 )
+
+find_package(OpenCV REQUIRED)
+
+add_executable(dms
+  dms.cc
+)
+target_link_libraries(dms
+  tensorflow-lite
+  ${OpenCV_LIBS}
+)

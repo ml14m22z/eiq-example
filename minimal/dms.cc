@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -24,17 +25,17 @@ const int MAX_FACE_NUM = 1;
 const std::vector<int> ANCHOR_STRIDES = {8, 16};
 const std::vector<int> ANCHOR_NUM = {2, 6};
 
-std::vector<std::vector<float>> createAnchors(const cv::Size& inputShape) {
+Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
     int h = inputShape.height;
-    std::vector<std::vector<float>> anchors;
+    Eigen::MatrixXf anchors;
     for (int i = 0; i < ANCHOR_STRIDES.size(); i++) {
         int s = ANCHOR_STRIDES[i];
         int aNum = ANCHOR_NUM[i];
         int gridCols = (w + s - 1) / s;
         int gridRows = (h + s - 1) / s;
-        std::vector<float> x(gridRows * gridCols * aNum);
-        std::vector<float> y(gridRows * gridCols * aNum);
+        Eigen::VectorXf x(gridRows * gridCols * aNum);
+        Eigen::VectorXf y(gridRows * gridCols * aNum);
         for (int r = 0; r < gridRows; r++) {
             for (int c = 0; c < gridCols; c++) {
                 for (int a = 0; a < aNum; a++) {
@@ -44,21 +45,29 @@ std::vector<std::vector<float>> createAnchors(const cv::Size& inputShape) {
                 }
             }
         }
-        std::cout << "x: " << x.size() << std::endl;
-        std::cout << "y: " << y.size() << std::endl;
-        for(int i = 0; i < x.size(); i++) {
-            std::cout << x[i] << " ";
-        }
-        std::cout << std::endl;
-        for(int i = 0; i < y.size(); i++) {
-            std::cout << y[i] << " ";
-        }
-        std::cout << std::endl;
+        // std::cout << "x.size: " << x.size() << std::endl;
+        // std::cout << "y.size: " << y.size() << std::endl;
         
-        // [[y0, x0], [y1, x1], ...]
-        anchors.push_back(x);
-        anchors.push_back(y);
+        // std::cout << "x.rows: " << x.rows() << std::endl;
+        // std::cout << "x.cols: " << x.cols() << std::endl;
+        // std::cout << "y.rows: " << y.rows() << std::endl;
+        // std::cout << "y.cols: " << y.cols() << std::endl;
+
+        Eigen::MatrixXf anchor_grid(gridRows * gridCols * aNum, 2);
+        anchor_grid << y, x;
+        // std::cout << "anchor_grid.size: " << anchor_grid.size() << std::endl;
+        // std::cout << "anchor_grid.rows: " << anchor_grid.rows() << std::endl;
+        // std::cout << "anchor_grid.cols: " << anchor_grid.cols() << std::endl;
+        // std::cout << "anchor_grid: " << anchor_grid << std::endl;
+
+        if (anchors.size() == 0) {
+            anchors = anchor_grid;
+        } else {
+            anchors.conservativeResize(anchors.rows() + anchor_grid.rows(), Eigen::NoChange);
+            anchors.bottomRows(anchor_grid.rows()) = anchor_grid;
+        }
     }
+    // std::cout << "anchors.size: " << anchors.size() << std::endl;
     return anchors;
 }
 
@@ -210,15 +219,10 @@ int main(int argc, char** argv) {
     int outputRegressorsIndex = interpreter->outputs()[1];
 
     // Create anchors
-    std::vector<std::vector<float>> anchors = createAnchors(cv::Size(inputShape->data[2], inputShape->data[1]));
+    Eigen::MatrixXf anchors = createAnchors(cv::Size(inputShape->data[2], inputShape->data[1]));
 
     // Show anchors
-    for (int i = 0; i < anchors.size(); i++) {
-        for (int j = 0; j < anchors[i].size(); j++) {
-            std::cout << anchors[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
+    // std::cout << anchors << std::endl;
 
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);

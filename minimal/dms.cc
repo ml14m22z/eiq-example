@@ -24,35 +24,43 @@ const int MAX_FACE_NUM = 1;
 const std::vector<int> ANCHOR_STRIDES = {8, 16};
 const std::vector<int> ANCHOR_NUM = {2, 6};
 
-// vector<vector<float>> createAnchors(const Size& inputShape) {
-//     int w = inputShape.width;
-//     int h = inputShape.height;
-//     vector<vector<float>> anchors;
-//     for (int i = 0; i < ANCHOR_STRIDES.size(); i++) {
-//         int s = ANCHOR_STRIDES[i];
-//         int aNum = ANCHOR_NUM[i];
-//         int gridCols = (w + s - 1) / s;
-//         int gridRows = (h + s - 1) / s;
-//         vector<float> x(gridRows * gridCols * aNum);
-//         vector<float> y(gridRows * gridCols * aNum);
-//         for (int r = 0; r < gridRows; r++) {
-//             for (int c = 0; c < gridCols; c++) {
-//                 for (int a = 0; a < aNum; a++) {
-//                     int idx = r * gridCols * aNum + c * aNum + a;
-//                     x[idx] = (c + 0.5) * s;
-//                     y[idx] = (r + 0.5) * s;
-//                 }
-//             }
-//         }
-//         for (int j = 0; j < x.size(); j++) {
-//             x[j] *= s;
-//             y[j] *= s;
-//         }
-//         anchors.push_back(x);
-//         anchors.push_back(y);
-//     }
-//     return anchors;
-// }
+std::vector<std::vector<float>> createAnchors(const cv::Size& inputShape) {
+    int w = inputShape.width;
+    int h = inputShape.height;
+    std::vector<std::vector<float>> anchors;
+    for (int i = 0; i < ANCHOR_STRIDES.size(); i++) {
+        int s = ANCHOR_STRIDES[i];
+        int aNum = ANCHOR_NUM[i];
+        int gridCols = (w + s - 1) / s;
+        int gridRows = (h + s - 1) / s;
+        std::vector<float> x(gridRows * gridCols * aNum);
+        std::vector<float> y(gridRows * gridCols * aNum);
+        for (int r = 0; r < gridRows; r++) {
+            for (int c = 0; c < gridCols; c++) {
+                for (int a = 0; a < aNum; a++) {
+                    int idx = r * gridCols * aNum + c * aNum + a;
+                    x[idx] = (c + 0.5) * s;
+                    y[idx] = (r + 0.5) * s;
+                }
+            }
+        }
+        std::cout << "x: " << x.size() << std::endl;
+        std::cout << "y: " << y.size() << std::endl;
+        for(int i = 0; i < x.size(); i++) {
+            std::cout << x[i] << " ";
+        }
+        std::cout << std::endl;
+        for(int i = 0; i < y.size(); i++) {
+            std::cout << y[i] << " ";
+        }
+        std::cout << std::endl;
+        
+        // [[y0, x0], [y1, x1], ...]
+        anchors.push_back(x);
+        anchors.push_back(y);
+    }
+    return anchors;
+}
 
 // tuple<vector<Rect>, vector<vector<Point2f>>, vector<float>> decode(const vector<float>& scores, const vector<float>& bboxes, const Size& inputShape, const vector<vector<float>>& anchors) {
 //     int w = inputShape.width;
@@ -201,11 +209,19 @@ int main(int argc, char** argv) {
     int outputClassificatorsIndex = interpreter->outputs()[0];
     int outputRegressorsIndex = interpreter->outputs()[1];
 
+    // Create anchors
+    std::vector<std::vector<float>> anchors = createAnchors(cv::Size(inputShape->data[2], inputShape->data[1]));
+
+    // Show anchors
+    for (int i = 0; i < anchors.size(); i++) {
+        for (int j = 0; j < anchors[i].size(); j++) {
+            std::cout << anchors[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);
-
-    // // Create anchors
-    // vector<vector<float>> anchors = createAnchors(Size(inputShape->data[2], inputShape->data[1]));
 
     // // Preprocess input data
     // Mat inputImage;

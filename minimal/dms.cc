@@ -72,7 +72,7 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
 }
 
 std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::vector<float>> 
-decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const std::vector<std::vector<float>>& anchors) {
+decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
     int w = inputShape.width;
     int h = inputShape.height;
     float topScore = *max_element(scores.begin(), scores.end());
@@ -83,17 +83,17 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
             cv::Rect bbox;
-            bbox.x = anchors[0][i] + bboxes[i * 4 + 1] * h;
-            bbox.y = anchors[1][i] + bboxes[i * 4] * w;
-            bbox.width = (anchors[0][i] + bboxes[i * 4 + 3] * h) - bbox.x;
-            bbox.height = (anchors[1][i] + bboxes[i * 4 + 2] * w) - bbox.y;
+            bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
+            bbox.y = anchors(i, 1) + bboxes[i * 4] * w;
+            bbox.width = (anchors(i, 0) + bboxes[i * 4 + 3] * h) - bbox.x;
+            bbox.height = (anchors(i, 1) + bboxes[i * 4 + 2] * w) - bbox.y;
             predBbox.push_back(bbox);
 
             std::vector<cv::Point2f> landmark;
             for (int j = 0; j < 5; j++) {
                 cv::Point2f point;
-                point.x = anchors[0][i] + bboxes[i * 10 + j * 2 + 5] * h;
-                point.y = anchors[1][i] + bboxes[i * 10 + j * 2 + 4] * w;
+                point.x = anchors(i, 0) + bboxes[i * 10 + j * 2 + 5] * h;
+                point.y = anchors(i, 1) + bboxes[i * 10 + j * 2 + 4] * w;
                 landmark.push_back(point);
             }
             landmarks.push_back(landmark);

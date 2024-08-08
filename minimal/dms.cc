@@ -71,37 +71,38 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     return anchors;
 }
 
-// tuple<vector<Rect>, vector<vector<Point2f>>, vector<float>> decode(const vector<float>& scores, const vector<float>& bboxes, const Size& inputShape, const vector<vector<float>>& anchors) {
-//     int w = inputShape.width;
-//     int h = inputShape.height;
-//     float topScore = *max_element(scores.begin(), scores.end());
-//     float scoreThresh = max(SCORE_THRESH, topScore);
-//     vector<Rect> predBbox;
-//     vector<vector<Point2f>> landmarks;
-//     vector<float> predScores;
-//     for (int i = 0; i < scores.size(); i++) {
-//         if (scores[i] >= scoreThresh) {
-//             Rect bbox;
-//             bbox.x = anchors[0][i] + bboxes[i * 4 + 1] * h;
-//             bbox.y = anchors[1][i] + bboxes[i * 4] * w;
-//             bbox.width = (anchors[0][i] + bboxes[i * 4 + 3] * h) - bbox.x;
-//             bbox.height = (anchors[1][i] + bboxes[i * 4 + 2] * w) - bbox.y;
-//             predBbox.push_back(bbox);
+std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::vector<float>> 
+decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const std::vector<std::vector<float>>& anchors) {
+    int w = inputShape.width;
+    int h = inputShape.height;
+    float topScore = *max_element(scores.begin(), scores.end());
+    float scoreThresh = std::max(SCORE_THRESH, topScore);
+    std::vector<cv::Rect> predBbox;
+    std::vector<std::vector<cv::Point2f>> landmarks;
+    std::vector<float> predScores;
+    for (int i = 0; i < scores.size(); i++) {
+        if (scores[i] >= scoreThresh) {
+            cv::Rect bbox;
+            bbox.x = anchors[0][i] + bboxes[i * 4 + 1] * h;
+            bbox.y = anchors[1][i] + bboxes[i * 4] * w;
+            bbox.width = (anchors[0][i] + bboxes[i * 4 + 3] * h) - bbox.x;
+            bbox.height = (anchors[1][i] + bboxes[i * 4 + 2] * w) - bbox.y;
+            predBbox.push_back(bbox);
 
-//             vector<Point2f> landmark;
-//             for (int j = 0; j < 5; j++) {
-//                 Point2f point;
-//                 point.x = anchors[0][i] + bboxes[i * 10 + j * 2 + 5] * h;
-//                 point.y = anchors[1][i] + bboxes[i * 10 + j * 2 + 4] * w;
-//                 landmark.push_back(point);
-//             }
-//             landmarks.push_back(landmark);
+            std::vector<cv::Point2f> landmark;
+            for (int j = 0; j < 5; j++) {
+                cv::Point2f point;
+                point.x = anchors[0][i] + bboxes[i * 10 + j * 2 + 5] * h;
+                point.y = anchors[1][i] + bboxes[i * 10 + j * 2 + 4] * w;
+                landmark.push_back(point);
+            }
+            landmarks.push_back(landmark);
 
-//             predScores.push_back(scores[i]);
-//         }
-//     }
-//     return make_tuple(predBbox, landmarks, predScores);
-// }
+            predScores.push_back(scores[i]);
+        }
+    }
+    return make_tuple(predBbox, landmarks, predScores);
+}
 
 // vector<int> nms(const vector<Rect>& bbox, const vector<float>& score, float thresh = 0.4) {
 //     vector<int> keep;
@@ -234,26 +235,26 @@ int main(int argc, char** argv) {
     inputImage = inputImage.reshape(1, inputImage.total());
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
 
+    // Set input tensor
+    memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
+
+    // Run inference
+    interpreter->Invoke();
+
+    // Get output tensors
+    const TfLiteTensor* outputClassificators = interpreter->tensor(outputClassificatorsIndex);
+    const TfLiteTensor* outputRegressors = interpreter->tensor(outputRegressorsIndex);
+
+    // Decode output
+    std::vector<float> scores(outputClassificators->data.f, outputClassificators->data.f + outputClassificators->bytes / sizeof(float));
+    std::vector<float> bboxes(outputRegressors->data.f, outputRegressors->data.f + outputRegressors->bytes / sizeof(float));
+    std::vector<cv::Rect> bboxesDecoded;
+    std::vector<std::vector<cv::Point2f>> landmarks;
+    std::vector<float> predScores;
+    tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, inputSize, anchors);
+
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);
-
-    // // Set input tensor
-    // memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
-
-    // // Run inference
-    // interpreter->Invoke();
-
-    // // Get output tensors
-    // const TfLiteTensor* outputClassificators = interpreter->tensor(outputClassificatorsIndex);
-    // const TfLiteTensor* outputRegressors = interpreter->tensor(outputRegressorsIndex);
-
-    // // Decode output
-    // vector<float> scores(outputClassificators->data.f, outputClassificators->data.f + outputClassificators->bytes / sizeof(float));
-    // vector<float> bboxes(outputRegressors->data.f, outputRegressors->data.f + outputRegressors->bytes / sizeof(float));
-    // vector<Rect> bboxesDecoded;
-    // vector<vector<Point2f>> landmarks;
-    // vector<float> predScores;
-    // tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, inputSize, anchors);
 
     // // Apply NMS
     // vector<int> keepMask = nms(bboxesDecoded, predScores);

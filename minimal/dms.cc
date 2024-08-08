@@ -14,7 +14,7 @@
 // using namespace cv;
 // using namespace tflite;
 
-const std::string MODEL_PATH = "../models/";
+const std::string MODEL_PATH = "../../models/";
 const std::string DETECT_MODEL = "face_detection_front_128_full_integer_quant.tflite";
 const std::string LANDMARK_MODEL = "face_landmark_192_integer_quant.tflite";
 const std::string EYE_MODEL = "iris_landmark_quant.tflite";
@@ -172,36 +172,37 @@ int main(int argc, char** argv) {
     cv::Size inputSize(128, 128);
     cv::Mat resizedImage = resizeCropImage(originalImage, inputSize);
 
+    // Load model
+    std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
+    if (!model) {
+        std::cerr << "Failed to load model: " << DETECT_MODEL << std::endl;
+        return -1;
+    }
+
+    // Create an interpreter
+    tflite::ops::builtin::BuiltinOpResolver resolver;
+    std::unique_ptr<tflite::Interpreter> interpreter;
+    tflite::InterpreterBuilder builder(*model, resolver);
+    if (builder(&interpreter) != kTfLiteOk) {
+        fprintf(stderr, "Failed to build interpreter\n");
+        return -1;
+    }
+
+
+    // Allocate tensor buffers
+    if (interpreter->AllocateTensors() != kTfLiteOk) {
+        fprintf(stderr, "Failed to allocate tensors\n");
+        return -1;
+    }
+
+    // Get input and output details
+    int inputIndex = interpreter->inputs()[0];
+    TfLiteIntArray* inputShape = interpreter->tensor(inputIndex)->dims;
+    int outputClassificatorsIndex = interpreter->outputs()[0];
+    int outputRegressorsIndex = interpreter->outputs()[1];
+
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);
-
-    // // Load model
-    // unique_ptr<FlatBufferModel> model = FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
-    // if (!model) {
-    //     cerr << "Failed to load model: " << DETECT_MODEL << endl;
-    //     return -1;
-    // }
-
-    // // Create an interpreter
-    // ops::builtin::BuiltinOpResolver resolver;
-    // std::unique_ptr<Interpreter> interpreter;
-    // InterpreterBuilder builder(*model, resolver);
-    // if (builder(&interpreter) != kTfLiteOk) {
-    //     fprintf(stderr, "Failed to build interpreter\n");
-    //     return -1;
-    // }
-
-    // // Allocate tensor buffers
-    // if (interpreter->AllocateTensors() != kTfLiteOk) {
-    //     fprintf(stderr, "Failed to allocate tensors\n");
-    //     return -1;
-    // }
-
-    // // Get input and output details
-    // int inputIndex = interpreter->inputs()[0];
-    // TfLiteIntArray* inputShape = interpreter->tensor(inputIndex)->dims;
-    // int outputClassificatorsIndex = interpreter->outputs()[0];
-    // int outputRegressorsIndex = interpreter->outputs()[1];
 
     // // Create anchors
     // vector<vector<float>> anchors = createAnchors(Size(inputShape->data[2], inputShape->data[1]));

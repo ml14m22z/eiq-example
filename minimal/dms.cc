@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -104,41 +105,41 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     return make_tuple(predBbox, landmarks, predScores);
 }
 
-// vector<int> nms(const vector<Rect>& bbox, const vector<float>& score, float thresh = 0.4) {
-//     vector<int> keep;
-//     vector<float> areas(bbox.size());
-//     for (int i = 0; i < bbox.size(); i++) {
-//         areas[i] = (bbox[i].width + 1) * (bbox[i].height + 1);
-//     }
-//     vector<int> order(score.size());
-//     iota(order.begin(), order.end(), 0);
-//     sort(order.begin(), order.end(), [&](int i, int j) { return score[i] > score[j]; });
-//     while (!order.empty()) {
-//         int i = order[0];
-//         keep.push_back(i);
-//         vector<int> inds;
-//         for (int j = 1; j < order.size(); j++) {
-//             int k = order[j];
-//             int xx1 = max(bbox[i].x, bbox[k].x);
-//             int yy1 = max(bbox[i].y, bbox[k].y);
-//             int xx2 = min(bbox[i].x + bbox[i].width, bbox[k].x + bbox[k].width);
-//             int yy2 = min(bbox[i].y + bbox[i].height, bbox[k].y + bbox[k].height);
-//             int w = max(0, xx2 - xx1 + 1);
-//             int h = max(0, yy2 - yy1 + 1);
-//             float inter = w * h;
-//             float ovr = inter / (areas[i] + areas[k] - inter);
-//             if (ovr <= thresh) {
-//                 inds.push_back(j);
-//             }
-//         }
-//         vector<int> newOrder(inds.size());
-//         for (int j = 0; j < inds.size(); j++) {
-//             newOrder[j] = order[inds[j]];
-//         }
-//         order = newOrder;
-//     }
-//     return keep;
-// }
+std::vector<int> nms(const std::vector<cv::Rect>& bbox, const std::vector<float>& score, float thresh = 0.4) {
+    std::vector<int> keep;
+    std::vector<float> areas(bbox.size());
+    for (int i = 0; i < bbox.size(); i++) {
+        areas[i] = (bbox[i].width + 1) * (bbox[i].height + 1);
+    }
+    std::vector<int> order(score.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::sort(order.begin(), order.end(), [&](int i, int j) { return score[i] > score[j]; });
+    while (!order.empty()) {
+        int i = order[0];
+        keep.push_back(i);
+        std::vector<int> inds;
+        for (int j = 1; j < order.size(); j++) {
+            int k = order[j];
+            int xx1 = std::max(bbox[i].x, bbox[k].x);
+            int yy1 = std::max(bbox[i].y, bbox[k].y);
+            int xx2 = std::min(bbox[i].x + bbox[i].width, bbox[k].x + bbox[k].width);
+            int yy2 = std::min(bbox[i].y + bbox[i].height, bbox[k].y + bbox[k].height);
+            int w = std::max(0, xx2 - xx1 + 1);
+            int h = std::max(0, yy2 - yy1 + 1);
+            float inter = w * h;
+            float ovr = inter / (areas[i] + areas[k] - inter);
+            if (ovr <= thresh) {
+                inds.push_back(j);
+            }
+        }
+        std::vector<int> newOrder(inds.size());
+        for (int j = 0; j < inds.size(); j++) {
+            newOrder[j] = order[inds[j]];
+        }
+        order = newOrder;
+    }
+    return keep;
+}
 
 cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize) {
     int ifmWidth = imageSize.width;
@@ -253,19 +254,19 @@ int main(int argc, char** argv) {
     std::vector<float> predScores;
     tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, inputSize, anchors);
 
+    // Apply NMS
+    std::vector<int> keepMask = nms(bboxesDecoded, predScores);
+    std::vector<cv::Rect> bboxesFiltered;
+    std::vector<std::vector<cv::Point2f>> landmarksFiltered;
+    std::vector<float> scoresFiltered;
+    for (int i = 0; i < keepMask.size(); i++) {
+        bboxesFiltered.push_back(bboxesDecoded[keepMask[i]]);
+        landmarksFiltered.push_back(landmarks[keepMask[i]]);
+        scoresFiltered.push_back(predScores[keepMask[i]]);
+    }
+
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);
-
-    // // Apply NMS
-    // vector<int> keepMask = nms(bboxesDecoded, predScores);
-    // vector<Rect> bboxesFiltered;
-    // vector<vector<Point2f>> landmarksFiltered;
-    // vector<float> scoresFiltered;
-    // for (int i = 0; i < keepMask.size(); i++) {
-    //     bboxesFiltered.push_back(bboxesDecoded[keepMask[i]]);
-    //     landmarksFiltered.push_back(landmarks[keepMask[i]]);
-    //     scoresFiltered.push_back(predScores[keepMask[i]]);
-    // }
 
     // // Draw face boxes and landmarks
     // Mat outputImage = drawFaceBox(originalImage, bboxesFiltered, landmarksFiltered, scoresFiltered);

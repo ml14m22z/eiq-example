@@ -147,7 +147,7 @@ cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize)
     int resizedWidth = originalImage.cols * scaleRatio;
     int resizedHeight = originalImage.rows * scaleRatio;
     cv::Mat resizedImage;
-    resize(originalImage, resizedImage, cv::Size(resizedWidth, resizedHeight), 0, 0, cv::INTER_LINEAR);
+    cv::resize(originalImage, resizedImage, cv::Size(resizedWidth, resizedHeight), 0, 0, cv::INTER_LINEAR);
     int left = (resizedWidth - ifmWidth) / 2;
     int top = (resizedHeight - ifmHeight) / 2;
     cv::Rect cropRect(left, top, ifmWidth, ifmHeight);
@@ -189,6 +189,9 @@ int main(int argc, char** argv) {
     cv::Size inputSize(128, 128);
     cv::Mat resizedImage = resizeCropImage(originalImage, inputSize);
 
+    std::cout << "originalImage.size: " << originalImage.size() << std::endl;
+    std::cout << "resizedImage.size: " << resizedImage.size() << std::endl;
+
     // Load model
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
     if (!model) {
@@ -224,15 +227,15 @@ int main(int argc, char** argv) {
     // Show anchors
     // std::cout << anchors << std::endl;
 
+    // Preprocess input data
+    cv::Mat inputImage;
+    resizedImage.convertTo(inputImage, CV_32F, 1.0 / 128.0, -1.0);
+    std::cout << "inputImage.size: " << inputImage.size() << std::endl;
+    inputImage = inputImage.reshape(1, inputImage.total());
+    std::cout << "inputImage.size: " << inputImage.size() << std::endl;
+
     cv::imshow("resizedImage", resizedImage);
     cv::waitKey(0);
-
-    // // Preprocess input data
-    // Mat inputImage;
-    // resize(resizedImage, inputImage, Size(inputShape->data[2], inputShape->data[1]));
-    // inputImage.convertTo(inputImage, CV_32F, 1.0 / 128.0, -1.0);
-    // inputImage = (inputImage - 128.0) / 128.0;
-    // inputImage = inputImage.reshape(1, inputImage.total());
 
     // // Set input tensor
     // memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));

@@ -157,22 +157,24 @@ cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize)
     return croppedImage;
 }
 
-// Mat drawFaceBox(const Mat& image, const vector<Rect>& bboxes, const vector<vector<Point2f>>& landmarks, const vector<float>& scores) {
-//     Mat result = image.clone();
-//     for (int i = 0; i < bboxes.size(); i++) {
-//         rectangle(result, bboxes[i], Scalar(255, 0, 0), 2);
-//         for (int j = 0; j < landmarks[i].size(); j++) {
-//             circle(result, landmarks[i][j], 2, Scalar(0, 255, 0), 2);
-//             putText(result, to_string(j), landmarks[i][j] + Point2f(5, 5), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 2);
-//         }
-//         string scoreLabel = to_string(scores[i]);
-//         Size labelSize = getTextSize(scoreLabel, FONT_HERSHEY_SIMPLEX, 1.0, 2, nullptr);
-//         Point2f labelBottomLeft = bboxes[i].tl() + Point2f(10, labelSize.height + 10);
-//         rectangle(result, bboxes[i].tl(), labelBottomLeft, Scalar(255, 0, 0), FILLED);
-//         putText(result, scoreLabel, bboxes[i].tl() + Point2f(5, labelBottomLeft.y - 5), FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 2);
-//     }
-//     return result;
-// }
+cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<cv::Rect>& bboxes, const std::vector<std::vector<cv::Point2f>>& landmarks, const std::vector<float>& scores) {
+    cv::Mat result = image.clone();
+    for (int i = 0; i < bboxes.size(); i++) {
+        cv::rectangle(result, bboxes[i], cv::Scalar(255, 0, 0), 2);
+        for (int j = 0; j < landmarks[i].size(); j++) {
+            cv::circle(result, landmarks[i][j], 2, cv::Scalar(0, 255, 0), 2);
+            cv::putText(result, std::to_string(j), landmarks[i][j] + cv::Point2f(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+        }
+        std::string scoreLabel = std::to_string(scores[i]);
+        cv::Size labelSize = cv::getTextSize(scoreLabel, cv::FONT_HERSHEY_SIMPLEX, 1.0, 2, nullptr);
+        // cv::Point2f labelBottomLeft = bboxes[i].tl() + cv::Point2f(10, labelSize.height + 10);
+        cv::Point2f labelBottomLeft = cv::Point2f(bboxes[i].tl()) + cv::Point2f(10, labelSize.height + 10);
+        cv::rectangle(result, bboxes[i].tl(), labelBottomLeft, cv::Scalar(255, 0, 0), cv::FILLED);
+        // cv::putText(result, scoreLabel, bboxes[i].tl() + cv::Point2f(5, labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+        cv::putText(result, scoreLabel, cv::Point2f(bboxes[i].tl()) + cv::Point2f(5, labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+    }
+    return result;
+}
 
 int main(int argc, char** argv) {
     std::string inputPath = "/dev/video0";
@@ -265,17 +267,14 @@ int main(int argc, char** argv) {
         scoresFiltered.push_back(predScores[keepMask[i]]);
     }
 
-    cv::imshow("resizedImage", resizedImage);
+    // Draw face boxes and landmarks
+    cv::Mat outputImage = drawFaceBox(originalImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
+
+    // Show images
+    cv::imshow("Input", originalImage);
+    cv::imshow("Resized", resizedImage);
+    cv::imshow("Output", outputImage);
     cv::waitKey(0);
-
-    // // Draw face boxes and landmarks
-    // Mat outputImage = drawFaceBox(originalImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
-
-    // // Show images
-    // imshow("Input", originalImage);
-    // imshow("Resized", resizedImage);
-    // imshow("Output", outputImage);
-    // waitKey(0);
 
     return 0;
 }

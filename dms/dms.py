@@ -172,23 +172,24 @@ if __name__ == '__main__':
 
     # gen_rgb_cpp.py
     original_image = Image.open(args.input).convert("RGB")
-    print('original_image.size:', original_image.size)
-    print('original_image:')
-    for row in range(3):
-        for col in range(3):
-            print(original_image.getpixel((row, col)), end=' ')
-        print('')
+    # print('original_image.size:', original_image.size)
+    # print('original_image:')
+    # for row in range(3):
+    #     for col in range(3):
+    #         print(original_image.getpixel((row, col)), end=' ')
+    #     print('')
 
-    rgb_data = resize_crop_image(original_image, (128, 128))
+    resized_image = resize_crop_image(original_image, (128, 128))
+    rgb_data = resized_image.reshape(128, 128, 3)
     print('rgb_data.shape:', rgb_data.shape)
     print('rgb_data:')
     for row in range(3):
         for col in range(3):
-            print(rgb_data.reshape(128, 128, 3)[row, col], end=' ')
+            print(rgb_data[row, col], end=' ')
         print('')
 
-    bgr_data = rgb_data.reshape(128, 128, 3)
-    cv2.imshow('bgr_data', cv2.cvtColor(bgr_data, cv2.COLOR_RGB2BGR))
+    bgr_data = cv2.cvtColor(rgb_data, cv2.COLOR_RGB2BGR)
+    cv2.imshow('bgr_data', bgr_data)
 
     # interpreter setup
     interpreter = tflite.Interpreter(model_path=str(MODEL_PATH / DETECT_MODEL))
@@ -199,13 +200,13 @@ if __name__ == '__main__':
     for output in interpreter.get_output_details():
         outputs_idx[output['name']] = output['index']
     anchors = create_anchors(input_shape)
-    print('anchors:', anchors)
-    np.savetxt('anchors.txt', anchors)
-    print('anchors.shape:', anchors.shape)
+    # print('anchors:', anchors)
+    # np.savetxt('anchors.txt', anchors)
+    # print('anchors.shape:', anchors.shape)
 
     # convert to float32
-    input_data = cv2.resize(bgr_data, tuple(input_shape)).astype(np.float32)
-    print('input_data.size:', input_data.size)
+    input_data = cv2.resize(rgb_data, tuple(input_shape)).astype(np.float32)
+    print('input_data.shape:', input_data.shape)
     print('input_data:')
     for row in range(3):
         for col in range(3):
@@ -213,7 +214,7 @@ if __name__ == '__main__':
         print('')
 
     input_data = (input_data - 128.0) / 128.0
-    print('input_data.size:', input_data.size)
+    print('input_data.shape:', input_data.shape)
     print('input_data:')
     for row in range(3):
         for col in range(3):
@@ -234,8 +235,8 @@ if __name__ == '__main__':
     print('bboxes.shape:', bboxes.shape)
 
     bboxes_decoded, landmarks, scores = decode(scores, bboxes)
-    bboxes_decoded *= bgr_data.shape[0]
-    landmarks *= bgr_data.shape[0]
+    bboxes_decoded *= rgb_data.shape[0]
+    landmarks *= rgb_data.shape[0]
     
     if len(bboxes_decoded) != 0:
         keep_mask = nms_oneclass(bboxes_decoded, scores)  # np.ones(pred_bbox.shape[0]).astype(bool)

@@ -24,11 +24,16 @@ def create_anchors(input_shape):
         gridCols = (w + s - 1) // s
         gridRows = (h + s - 1) // s
         x, y = np.meshgrid(np.arange(gridRows), np.arange(gridCols))
+        print(f'x.shape: {x.shape}, y.shape: {y.shape}')
         x, y = x[..., None], y[..., None]
+        print(f'x.shape: {x.shape}, y.shape: {y.shape}')
         anchor_grid = np.concatenate([y, x], axis=-1)
+        print(f'anchor_grid.shape: {anchor_grid.shape}')
         anchor_grid = np.tile(anchor_grid, (1, 1, a_num))
         anchor_grid = s * (anchor_grid.reshape(-1, 2) + 0.5)
         anchors.append(anchor_grid)
+        print(f'anchor_grid.shape: {anchor_grid.shape}')
+        # print(f'anchor_grid: {anchor_grid}')
     return np.concatenate(anchors, axis=0)
 
 
@@ -167,8 +172,23 @@ if __name__ == '__main__':
 
     # gen_rgb_cpp.py
     original_image = Image.open(args.input).convert("RGB")
+    print('original_image.size:', original_image.size)
+    print('original_image:')
+    for row in range(3):
+        for col in range(3):
+            print(original_image.getpixel((col, row)), end=' ')
+        print('')
+
     rgb_data = resize_crop_image(original_image, (128, 128))
+    print('rgb_data.shape:', rgb_data.shape)
+    print('rgb_data:')
+    for row in range(3):
+        for col in range(3):
+            print(rgb_data.reshape(128, 128, 3)[col, row], end=' ')
+        print('')
+
     img = rgb_data.reshape(128, 128, 3)
+    cv2.imshow('img', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     # interpreter setup
     interpreter = tflite.Interpreter(model_path=str(MODEL_PATH / DETECT_MODEL))
@@ -185,7 +205,21 @@ if __name__ == '__main__':
 
     # convert to float32
     input_data = cv2.resize(img, tuple(input_shape)).astype(np.float32)
+    print('input_data.size:', input_data.size)
+    print('input_data:')
+    for row in range(3):
+        for col in range(3):
+            print(f'{input_data[row, col]}', end=' ')
+        print('')
+
     input_data = (input_data - 128.0) / 128.0
+    print('input_data.size:', input_data.size)
+    print('input_data:')
+    for row in range(3):
+        for col in range(3):
+            print(f'{input_data[row, col]}', end=' ')
+        print('')
+
     input_data = np.expand_dims(input_data, axis=0)
 
     tmp = input_data.astype(np.float32)[0] * 128.0 + 128.0
@@ -212,6 +246,7 @@ if __name__ == '__main__':
     print('rgb_data.shape:', rgb_data.shape)
     print('input_shape:', input_shape)
     print('input_data.shape:', input_data.shape)
+    print('input_data:', input_data[0][0][0:10])
     print('tmp.shape:', tmp.shape)
     print('keep_mask:', keep_mask)
     print('bboxes_decoded:', bboxes_decoded)

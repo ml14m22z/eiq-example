@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -189,12 +190,48 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    std::cout << "originalImage.size: " << originalImage.size() << std::endl;
+    std::cout << "originalImage.rows: " << originalImage.rows << std::endl;
+    std::cout << "originalImage.cols: " << originalImage.cols << std::endl;
+    std::cout << "originalImage.channels: " << originalImage.channels() << std::endl;
+    std::cout << "originalImage: " << std::endl;
+    // for (int r = 0; r < originalImage.rows; r++) {
+    for (int r = 0; r < 3; r++) {
+        // for (int c = 0; c < originalImage.cols; c++) {
+        for (int c = 0; c < 3; c++) {
+            // std::cout << int(originalImage.at<unsigned char>(r, c)) << " ";
+            int r = originalImage.at<cv::Vec3b>(r, c)[2];
+            int g = originalImage.at<cv::Vec3b>(r, c)[1];
+            int b = originalImage.at<cv::Vec3b>(r, c)[0];
+            std::cout << "(" << r << ", " << g << ", " << b << ") ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+
     // Resize and crop input image
     cv::Size inputSize(128, 128);
     cv::Mat resizedImage = resizeCropImage(originalImage, inputSize);
 
-    std::cout << "originalImage.size: " << originalImage.size() << std::endl;
     std::cout << "resizedImage.size: " << resizedImage.size() << std::endl;
+    std::cout << "resizedImage.rows: " << resizedImage.rows << std::endl;
+    std::cout << "resizedImage.cols: " << resizedImage.cols << std::endl;
+    std::cout << "resizedImage.channels: " << resizedImage.channels() << std::endl;
+    std::cout << "resizedImage: " << std::endl;
+    // for (int r = 0; r < resizedImage.rows; r++) {
+    for (int r = 0; r < 3; r++) {
+        // for (int c = 0; c < resizedImage.cols; c++) {
+        for (int c = 0; c < 3; c++) {
+            // std::cout << int(resizedImage.at<unsigned char>(r, c)) << " ";
+            int r = resizedImage.at<cv::Vec3b>(r, c)[2];
+            int g = resizedImage.at<cv::Vec3b>(r, c)[1];
+            int b = resizedImage.at<cv::Vec3b>(r, c)[0];
+            std::cout << "(" << r << ", " << g << ", " << b << ") ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
 
     // Load model
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
@@ -238,6 +275,16 @@ int main(int argc, char** argv) {
     inputImage = inputImage.reshape(1, inputImage.total());
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
 
+    std::cout << "inputImage: " << std::endl;
+    // for (int r = 0; r < inputImage.rows; r++) {
+    for (int r = 0; r < 1; r++) {
+        for (int c = 0; c < inputImage.cols; c++) {
+            std::cout << inputImage.at<float>(r, c) << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
     // Set input tensor
     memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
 
@@ -256,8 +303,37 @@ int main(int argc, char** argv) {
     std::vector<float> predScores;
     tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, inputSize, anchors);
 
+    std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
+    std::cout << "bboxesDecoded: ";
+    for (int i = 0; i < bboxesDecoded.size(); i++) {
+        std::cout << bboxesDecoded[i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "landmarks.size: " << landmarks.size() << std::endl;
+    std::cout << "landmarks: ";
+    for (int i = 0; i < landmarks.size(); i++) {
+        std::cout << landmarks[i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "predScores.size: " << predScores.size() << std::endl;
+    std::cout << "predScores: ";
+    for (int i = 0; i < predScores.size(); i++) {
+        std::cout << predScores[i] << " ";
+    }
+    std::cout << std::endl;
+
     // Apply NMS
     std::vector<int> keepMask = nms(bboxesDecoded, predScores);
+
+    std::cout << "keepMask.size: " << keepMask.size() << std::endl;
+    std::cout << "keepMask: ";
+    for (int i = 0; i < keepMask.size(); i++) {
+        std::cout << keepMask[i] << " ";
+    }
+    std::cout << std::endl;
+
     std::vector<cv::Rect> bboxesFiltered;
     std::vector<std::vector<cv::Point2f>> landmarksFiltered;
     std::vector<float> scoresFiltered;
@@ -266,6 +342,10 @@ int main(int argc, char** argv) {
         landmarksFiltered.push_back(landmarks[keepMask[i]]);
         scoresFiltered.push_back(predScores[keepMask[i]]);
     }
+
+    std::cout << "bboxesFiltered.size: " << bboxesFiltered.size() << std::endl;
+    std::cout << "landmarksFiltered.size: " << landmarksFiltered.size() << std::endl;
+    std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
 
     // Draw face boxes and landmarks
     cv::Mat outputImage = drawFaceBox(originalImage, bboxesFiltered, landmarksFiltered, scoresFiltered);

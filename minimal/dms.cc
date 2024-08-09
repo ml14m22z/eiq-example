@@ -178,6 +178,29 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<cv::Rect>& bboxes, c
     return result;
 }
 
+int dump(cv::Mat img) {
+    std::cout << "img.size: " << img.size() << std::endl;
+    std::cout << "img.channels: " << img.channels() << std::endl;
+    std::cout << "img.depth: " << img.depth() << std::endl;
+    std::cout << "img.type: " << cv::typeToString(img.type()) << std::endl;
+    std::cout << "img: " << std::endl;
+    for (int r = 0; r < 3; r++) {
+        for (int c = 0; c < 3; c++) {
+            if (img.type() == CV_32FC3) {
+                cv::Vec3f pixel = img.at<cv::Vec3f>(r, c);
+                std::cout << pixel << " ";
+            } else if (img.type() == CV_8UC3) {
+                cv::Vec3b pixel = img.at<cv::Vec3b>(r, c);
+                std::cout << pixel << " ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    
+    return 0;
+}
+
 int main(int argc, char** argv) {
 
     // Load model

@@ -12,6 +12,7 @@
 #include <tensorflow/lite/model.h>
 #include <tensorflow/lite/kernels/register.h>
 #include <tensorflow/lite/optional_debug_tools.h>
+#include "InputFiles.hpp"
 
 // using namespace std;
 // using namespace cv;
@@ -178,60 +179,6 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<cv::Rect>& bboxes, c
 }
 
 int main(int argc, char** argv) {
-    std::string inputPath = "/dev/video0";
-    if (argc > 1) {
-        inputPath = argv[1];
-    }
-
-    // Load input image
-    cv::Mat originalImage = cv::imread(inputPath);
-    if (originalImage.empty()) {
-        std::cerr << "Failed to load input image: " << inputPath << std::endl;
-        return -1;
-    }
-
-    std::cout << "originalImage.size: " << originalImage.size() << std::endl;
-    std::cout << "originalImage.rows: " << originalImage.rows << std::endl;
-    std::cout << "originalImage.cols: " << originalImage.cols << std::endl;
-    std::cout << "originalImage.channels: " << originalImage.channels() << std::endl;
-    std::cout << "originalImage: " << std::endl;
-    // for (int r = 0; r < originalImage.rows; r++) {
-    for (int r = 0; r < 3; r++) {
-        // for (int c = 0; c < originalImage.cols; c++) {
-        for (int c = 0; c < 3; c++) {
-            // std::cout << int(originalImage.at<unsigned char>(r, c)) << " ";
-            int r = originalImage.at<cv::Vec3b>(r, c)[2];
-            int g = originalImage.at<cv::Vec3b>(r, c)[1];
-            int b = originalImage.at<cv::Vec3b>(r, c)[0];
-            std::cout << "(" << r << ", " << g << ", " << b << ") ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-
-
-    // Resize and crop input image
-    cv::Size inputSize(128, 128);
-    cv::Mat resizedImage = resizeCropImage(originalImage, inputSize);
-
-    std::cout << "resizedImage.size: " << resizedImage.size() << std::endl;
-    std::cout << "resizedImage.rows: " << resizedImage.rows << std::endl;
-    std::cout << "resizedImage.cols: " << resizedImage.cols << std::endl;
-    std::cout << "resizedImage.channels: " << resizedImage.channels() << std::endl;
-    std::cout << "resizedImage: " << std::endl;
-    // for (int r = 0; r < resizedImage.rows; r++) {
-    for (int r = 0; r < 3; r++) {
-        // for (int c = 0; c < resizedImage.cols; c++) {
-        for (int c = 0; c < 3; c++) {
-            // std::cout << int(resizedImage.at<unsigned char>(r, c)) << " ";
-            int r = resizedImage.at<cv::Vec3b>(r, c)[2];
-            int g = resizedImage.at<cv::Vec3b>(r, c)[1];
-            int b = resizedImage.at<cv::Vec3b>(r, c)[0];
-            std::cout << "(" << r << ", " << g << ", " << b << ") ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
 
     // Load model
     std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
@@ -269,8 +216,16 @@ int main(int argc, char** argv) {
     // std::cout << anchors << std::endl;
 
     // Preprocess input data
+    cv::Mat rgbResizedImage(cv::Size(inputShape->data[2], inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
+    cv::Mat bgrResizedImage;
+    cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
+    cv::imshow("bgrResizedImage", bgrResizedImage);
+
     cv::Mat inputImage;
-    resizedImage.convertTo(inputImage, CV_32F, 1.0 / 128.0, -1.0);
+    bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 128.0, -1.0);
+    // bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 256.0, 0.0);
+    cv::imshow("inputImage", inputImage);
+
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
     inputImage = inputImage.reshape(1, inputImage.total());
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
@@ -301,7 +256,7 @@ int main(int argc, char** argv) {
     std::vector<cv::Rect> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
-    tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, inputSize, anchors);
+    tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(inputShape->data[2], inputShape->data[1]), anchors);
 
     std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
     std::cout << "bboxesDecoded: ";
@@ -348,11 +303,9 @@ int main(int argc, char** argv) {
     std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
 
     // Draw face boxes and landmarks
-    cv::Mat outputImage = drawFaceBox(originalImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
+    cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
 
     // Show images
-    cv::imshow("Input", originalImage);
-    cv::imshow("Resized", resizedImage);
     cv::imshow("Output", outputImage);
     cv::waitKey(0);
 

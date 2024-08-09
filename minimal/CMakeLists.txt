@@ -47,7 +47,14 @@ find_package(OpenCV REQUIRED)
 
 add_executable(dms
   dms.cc
+  InputFiles.cc
+  grace_hopper.cc
 )
+
+target_include_directories(dms
+  PUBLIC ./
+)
+
 target_link_libraries(dms
   tensorflow-lite
   ${OpenCV_LIBS}

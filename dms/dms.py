@@ -176,7 +176,7 @@ if __name__ == '__main__':
     print('original_image:')
     for row in range(3):
         for col in range(3):
-            print(original_image.getpixel((col, row)), end=' ')
+            print(original_image.getpixel((row, col)), end=' ')
         print('')
 
     rgb_data = resize_crop_image(original_image, (128, 128))
@@ -184,11 +184,11 @@ if __name__ == '__main__':
     print('rgb_data:')
     for row in range(3):
         for col in range(3):
-            print(rgb_data.reshape(128, 128, 3)[col, row], end=' ')
+            print(rgb_data.reshape(128, 128, 3)[row, col], end=' ')
         print('')
 
-    img = rgb_data.reshape(128, 128, 3)
-    cv2.imshow('img', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+    bgr_data = rgb_data.reshape(128, 128, 3)
+    cv2.imshow('bgr_data', cv2.cvtColor(bgr_data, cv2.COLOR_RGB2BGR))
 
     # interpreter setup
     interpreter = tflite.Interpreter(model_path=str(MODEL_PATH / DETECT_MODEL))
@@ -204,7 +204,7 @@ if __name__ == '__main__':
     print('anchors.shape:', anchors.shape)
 
     # convert to float32
-    input_data = cv2.resize(img, tuple(input_shape)).astype(np.float32)
+    input_data = cv2.resize(bgr_data, tuple(input_shape)).astype(np.float32)
     print('input_data.size:', input_data.size)
     print('input_data:')
     for row in range(3):
@@ -234,8 +234,8 @@ if __name__ == '__main__':
     print('bboxes.shape:', bboxes.shape)
 
     bboxes_decoded, landmarks, scores = decode(scores, bboxes)
-    bboxes_decoded *= img.shape[0]
-    landmarks *= img.shape[0]
+    bboxes_decoded *= bgr_data.shape[0]
+    landmarks *= bgr_data.shape[0]
     
     if len(bboxes_decoded) != 0:
         keep_mask = nms_oneclass(bboxes_decoded, scores)  # np.ones(pred_bbox.shape[0]).astype(bool)

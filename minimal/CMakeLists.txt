@@ -52,3 +52,17 @@ target_link_libraries(dms
   tensorflow-lite
   ${OpenCV_LIBS}
 )
+
+add_executable(imshow
+  imshow.cc
+  InputFiles.cc
+  grace_hopper.cc
+)
+
+target_include_directories(imshow
+  PUBLIC ./
+)
+
+target_link_libraries(imshow
+  ${OpenCV_LIBS}
+)

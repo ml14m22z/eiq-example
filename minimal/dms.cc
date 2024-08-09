@@ -240,13 +240,18 @@ int main(int argc, char** argv) {
 
     // Preprocess input data
     cv::Mat rgbResizedImage(cv::Size(inputShape->data[2], inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
+    std::cout << "rgbResizedImage: " << std::endl;
+    dump(rgbResizedImage);
+
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
     cv::imshow("bgrResizedImage", bgrResizedImage);
 
     cv::Mat inputImage;
-    bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 128.0, -1.0);
+    bgrResizedImage.convertTo(inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
     // bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 256.0, 0.0);
+    std::cout << "inputImage: " << std::endl;
+    dump(inputImage);
     cv::imshow("inputImage", inputImage);
 
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
@@ -254,14 +259,7 @@ int main(int argc, char** argv) {
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
 
     std::cout << "inputImage: " << std::endl;
-    // for (int r = 0; r < inputImage.rows; r++) {
-    for (int r = 0; r < 1; r++) {
-        for (int c = 0; c < inputImage.cols; c++) {
-            std::cout << inputImage.at<float>(r, c) << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    dump(inputImage);
 
     // Set input tensor
     memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));

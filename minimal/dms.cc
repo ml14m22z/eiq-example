@@ -88,20 +88,44 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     float scoreThresh = std::max(SCORE_THRESH, topScore);
     std::cout << "scoreThresh: " << scoreThresh << std::endl;
 
-    std::vector<cv::Rect> predBbox;
+    std::vector<Eigen::Vector4d> pred_bbox;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
             std::cout << "scores[" << i << "]: " << scores[i] << std::endl;
 
-            cv::Rect bbox;
-            bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
-            bbox.y = anchors(i, 1) + bboxes[i * 4] * w;
-            bbox.width = (anchors(i, 0) + bboxes[i * 4 + 3] * h) - bbox.x;
-            bbox.height = (anchors(i, 1) + bboxes[i * 4 + 2] * w) - bbox.y;
-            predBbox.push_back(bbox);
-            std::cout << "bbox: " << bbox << std::endl;
+            for (int j = 0; j < 16; j++) {
+                std::cout << "bboxes[" << i << " * 16 + " << j << "]: " << bboxes[i * 16 + j] << std::endl;
+            }
+
+            std::cout << "anchors: " << anchors(i, 0) << " " << anchors(i, 1) << std::endl;
+
+            float bboxes_decoded[2] = {(anchors(i, 0) + bboxes[i * 16 + 1]) / h, (anchors(i, 1) + bboxes[i * 16]) / w};
+            std::cout << "bboxes_decoded: " << bboxes_decoded[0] << " " << bboxes_decoded[1] << std::endl;
+
+            float pred_w = bboxes[i * 16 + 2] / w;
+            float pred_h = bboxes[i * 16 + 3] / h;
+            std::cout << "pred_w: " << pred_w << std::endl;
+            std::cout << "pred_h: " << pred_h << std::endl;
+
+            float topleft_x = bboxes_decoded[1] - pred_w * 0.5;
+            float topleft_y = bboxes_decoded[0] - pred_h * 0.5;
+            float btmright_x = bboxes_decoded[1] + pred_w * 0.5;
+            float btmright_y = bboxes_decoded[0] + pred_h * 0.5;
+            std::cout << "topleft_x: " << topleft_x << std::endl;
+            std::cout << "topleft_y: " << topleft_y << std::endl;
+            std::cout << "btmright_x: " << btmright_x << std::endl;
+            std::cout << "btmright_y: " << btmright_y << std::endl;
+            pred_bbox.push_back(Eigen::Vector4d(topleft_x, topleft_y, btmright_x, btmright_y));
+
+            // cv::Rect bbox;
+            // bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
+            // bbox.y = anchors(i, 1) + bboxes[i * 4] * w;
+            // bbox.width = (anchors(i, 0) + bboxes[i * 4 + 3] * h) - bbox.x;
+            // bbox.height = (anchors(i, 1) + bboxes[i * 4 + 2] * w) - bbox.y;
+            // predBbox.push_back(bbox);
+            // std::cout << "bbox: " << bbox << std::endl;
 
             std::vector<cv::Point2f> landmark;
             for (int j = 0; j < 5; j++) {

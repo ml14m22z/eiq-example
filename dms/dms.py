@@ -45,28 +45,55 @@ def decode(scores, bboxes):
     print(f'top_score: {top_score}')
 
     cls_mask = scores >= max(SCORE_THRESH, top_score)
-    # print(f'cls_mask: {cls_mask}')
+    for i in range(cls_mask.shape[0]):
+        if cls_mask[i]:
+            print(f'scores[{i}] >= max({SCORE_THRESH}, {top_score})')
 
     if cls_mask.sum() == 0:
         return np.array([]), np.array([]), np.array([])
 
     scores = scores[cls_mask]
+    print('scores.shape:', scores.shape)
+    print('scores:', scores)
+
     bboxes = bboxes[cls_mask]
+    print('bboxes.shape:', bboxes.shape)
+    print('bboxes:', bboxes)
+
     bboxes_anchors = anchors[cls_mask]
+    print('bboxes_anchors.shape:', bboxes_anchors.shape)
+    print('bboxes_anchors:', bboxes_anchors)
+
+    print('bboxes[:, 1]: ', bboxes[:, 1])
+    print('bboxes[:, 0]: ', bboxes[:, 0])
 
     bboxes_decoded = bboxes_anchors.copy()
+    print('bboxes_decoded[:, 0]: ', bboxes_decoded[:, 0])
+    print('bboxes_decoded[:, 1]: ', bboxes_decoded[:, 1])
+
     bboxes_decoded[:, 0] += bboxes[:, 1]  # row
     bboxes_decoded[:, 1] += bboxes[:, 0]  # columns
+    print('bboxes_decoded[:, 0]: ', bboxes_decoded[:, 0])
+    print('bboxes_decoded[:, 1]: ', bboxes_decoded[:, 1])
+
     bboxes_decoded[:, 0] /= h
     bboxes_decoded[:, 1] /= w
+    print('bboxes_decoded[:, 0]: ', bboxes_decoded[:, 0])
+    print('bboxes_decoded[:, 1]: ', bboxes_decoded[:, 1])
 
     pred_w = bboxes[:, 2] / w
     pred_h = bboxes[:, 3] / h
+    print('pred_w: ', pred_w)
+    print('pred_h: ', pred_h)
 
     topleft_x = bboxes_decoded[:, 1] - pred_w * 0.5
     topleft_y = bboxes_decoded[:, 0] - pred_h * 0.5
     btmright_x = bboxes_decoded[:, 1] + pred_w * 0.5
     btmright_y = bboxes_decoded[:, 0] + pred_h * 0.5
+    print('topleft_x: ', topleft_x)
+    print('topleft_y: ', topleft_y)
+    print('btmright_x: ', btmright_x)
+    print('btmright_y: ', btmright_y)
 
     pred_bbox = np.stack([topleft_x, topleft_y, btmright_x, btmright_y], axis=-1)
 

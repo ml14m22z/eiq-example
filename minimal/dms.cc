@@ -74,7 +74,8 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     return anchors;
 }
 
-std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::vector<float>> 
+// std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
+auto 
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
     int w = inputShape.width;
     int h = inputShape.height;
@@ -89,7 +90,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     std::cout << "scoreThresh: " << scoreThresh << std::endl;
 
     std::vector<Eigen::Vector4d> pred_bbox;
-    std::vector<float> landmarks;
+    std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
@@ -137,31 +138,40 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
             // }
             // landmarks.push_back(landmark);
 
-            for (int j = 0; j < 12; j++) {
-                landmarks.push_back(bboxes[i * 16 + j + 4]);
+            std::vector<cv::Point2f> landmark;
+
+            for (int j = 0; j < 6; j++) {
+                cv::Point2f point;
+                point.x = bboxes[i * 16 + j + 4];
+                point.y = bboxes[i * 16 + j + 5];
+                landmark.push_back(point);
             }
-            std::cout << "landmarks: ";
-            for (int j = 0; j < landmarks.size(); j++) {
-                std::cout << landmarks[j] << " ";
+
+            std::cout << "landmark: " << landmark << std::endl;
+
+            for (int j = 0; j < 6; j++) {
+                landmark[j].x += anchors(i, 1);
+                landmark[j].y += anchors(i, 0);
             }
-            std::cout << std::endl;
+
+            std::cout << "landmark: " << landmark << std::endl;
+
+            for (int j = 0; j < 6; j++) {
+                landmark[j].x /= h;
+                landmark[j].y /= w;
+            }
             
-            // for (int j = 0; j < 12; j++) {
-            //     if (j % 2 == 0) {
-            //         landmarks[j] = (landmarks[j] + anchors(i, 1)) / w;
-            //     } else {
-            //         landmarks[j] = (landmarks[j] + anchors(i, 0)) / h;
-            //     }
-            // }
-            // std::cout << "landmarks: " << landmarks << std::endl;
+            std::cout << "landmark: " << landmark << std::endl;
+
+            landmarks.push_back(landmark);
 
             predScores.push_back(scores[i]);
         }
     }
     return make_tuple(pred_bbox, landmarks, predScores);
 }
-
-std::vector<int> nms(const std::vector<cv::Rect>& bbox, const std::vector<float>& score, float thresh = 0.4) {
+/*
+std::vector<int> nms(const std::vector<Eigen::Vector4d<float>>& bbox, const std::vector<float>& score, float thresh = 0.4) {
     std::vector<int> keep;
     std::vector<float> areas(bbox.size());
     for (int i = 0; i < bbox.size(); i++) {
@@ -196,7 +206,7 @@ std::vector<int> nms(const std::vector<cv::Rect>& bbox, const std::vector<float>
     }
     return keep;
 }
-
+*/
 cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize) {
     int ifmWidth = imageSize.width;
     int ifmHeight = imageSize.height;
@@ -371,7 +381,7 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
-    std::vector<cv::Rect> bboxesDecoded;
+    std::vector<Eigen::Vector4d> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(inputShape->data[2], inputShape->data[1]), anchors);
@@ -397,6 +407,7 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
+    /*
     // Apply NMS
     std::vector<int> keepMask = nms(bboxesDecoded, predScores);
 
@@ -426,6 +437,7 @@ int main(int argc, char** argv) {
     // Show images
     cv::imshow("Output", outputImage);
     cv::waitKey(0);
+    */
 
     return 0;
 }

@@ -89,7 +89,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     std::cout << "scoreThresh: " << scoreThresh << std::endl;
 
     std::vector<Eigen::Vector4d> pred_bbox;
-    std::vector<std::vector<cv::Point2f>> landmarks;
+    std::vector<float> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
@@ -127,20 +127,38 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
             // predBbox.push_back(bbox);
             // std::cout << "bbox: " << bbox << std::endl;
 
-            std::vector<cv::Point2f> landmark;
-            for (int j = 0; j < 5; j++) {
-                cv::Point2f point;
-                point.x = anchors(i, 0) + bboxes[i * 10 + j * 2 + 5] * h;
-                point.y = anchors(i, 1) + bboxes[i * 10 + j * 2 + 4] * w;
-                landmark.push_back(point);
-                std::cout << "landmark[" << j << "]: " << point << std::endl;
+            // std::vector<cv::Point2f> landmark;
+            // for (int j = 0; j < 5; j++) {
+                // cv::Point2f point;
+                // point.x = anchors(i, 0) + bboxes[i * 10 + j * 2 + 5] * h;
+                // point.y = anchors(i, 1) + bboxes[i * 10 + j * 2 + 4] * w;
+                // landmark.push_back(point);
+                // std::cout << "landmark[" << j << "]: " << point << std::endl;
+            // }
+            // landmarks.push_back(landmark);
+
+            for (int j = 0; j < 12; j++) {
+                landmarks.push_back(bboxes[i * 16 + j + 4]);
             }
-            landmarks.push_back(landmark);
+            std::cout << "landmarks: ";
+            for (int j = 0; j < landmarks.size(); j++) {
+                std::cout << landmarks[j] << " ";
+            }
+            std::cout << std::endl;
+            
+            // for (int j = 0; j < 12; j++) {
+            //     if (j % 2 == 0) {
+            //         landmarks[j] = (landmarks[j] + anchors(i, 1)) / w;
+            //     } else {
+            //         landmarks[j] = (landmarks[j] + anchors(i, 0)) / h;
+            //     }
+            // }
+            // std::cout << "landmarks: " << landmarks << std::endl;
 
             predScores.push_back(scores[i]);
         }
     }
-    return make_tuple(predBbox, landmarks, predScores);
+    return make_tuple(pred_bbox, landmarks, predScores);
 }
 
 std::vector<int> nms(const std::vector<cv::Rect>& bbox, const std::vector<float>& score, float thresh = 0.4) {

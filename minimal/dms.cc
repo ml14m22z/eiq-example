@@ -245,24 +245,32 @@ int main(int argc, char** argv) {
 
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
+    std::cout << "bgrResizedImage: " << std::endl;
+    dump(bgrResizedImage);
     cv::imshow("bgrResizedImage", bgrResizedImage);
 
     cv::Mat inputImage;
-    bgrResizedImage.convertTo(inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
+    rgbResizedImage.convertTo(inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
     // bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 256.0, 0.0);
     std::cout << "inputImage: " << std::endl;
     dump(inputImage);
     cv::imshow("inputImage", inputImage);
 
     std::cout << "inputImage.size: " << inputImage.size() << std::endl;
-    inputImage = inputImage.reshape(1, inputImage.total());
-    std::cout << "inputImage.size: " << inputImage.size() << std::endl;
+    // inputImage = inputImage.reshape(3, inputImage.total());
+    // std::cout << "inputImage.size: " << inputImage.size() << std::endl;
 
     std::cout << "inputImage: " << std::endl;
     dump(inputImage);
+    
+    std::cout << "inputImage.total: " << inputImage.total() << std::endl;
+    std::cout << "sizeof(cv::Vec3f): " << sizeof(cv::Vec3f) << std::endl;
 
     // Set input tensor
-    memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
+    // memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
+    memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(cv::Vec3f));
+
+    std::cout << "set input tensor done." << std::endl;
 
     // Run inference
     interpreter->Invoke();

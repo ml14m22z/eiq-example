@@ -189,6 +189,12 @@ if __name__ == '__main__':
         print('')
 
     bgr_data = cv2.cvtColor(rgb_data, cv2.COLOR_RGB2BGR)
+    print('bgr_data.shape:', bgr_data.shape)
+    print('bgr_data:')
+    for row in range(3):
+        for col in range(3):
+            print(bgr_data[row, col], end=' ')
+        print('')
     cv2.imshow('bgr_data', bgr_data)
 
     # interpreter setup

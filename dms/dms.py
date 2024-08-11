@@ -39,8 +39,14 @@ def create_anchors(input_shape):
 
 def decode(scores, bboxes):
     w, h = input_shape
+    print(f'w: {w}, h: {h}')
+
     top_score = np.sort(scores)[-MAX_FACE_NUM]
+    print(f'top_score: {top_score}')
+
     cls_mask = scores >= max(SCORE_THRESH, top_score)
+    # print(f'cls_mask: {cls_mask}')
+
     if cls_mask.sum() == 0:
         return np.array([]), np.array([]), np.array([])
 
@@ -71,6 +77,9 @@ def decode(scores, bboxes):
     landmarks[:, 1::2] /= h
     landmarks[:, ::2] /= w
 
+    print(f'pred_bbox: {pred_bbox}')
+    print(f'landmarks: {landmarks}')
+    print(f'scores: {scores}')
     return pred_bbox, landmarks, scores
 
 
@@ -221,11 +230,11 @@ if __name__ == '__main__':
 
     input_data = (input_data - 128.0) / 128.0
     print('input_data.shape:', input_data.shape)
-    print('input_data:')
-    for row in range(3):
-        for col in range(3):
-            print(f'{input_data[row, col]}', end=' ')
-        print('')
+    # print('input_data:')
+    # for row in range(3):
+    #     for col in range(3):
+    #         print(f'{input_data[row, col]}', end=' ')
+    #     print('')
 
     input_data = np.expand_dims(input_data, axis=0)
 
@@ -235,12 +244,22 @@ if __name__ == '__main__':
     interpreter.set_tensor(input_idx, input_data)
     interpreter.invoke()
     scores = interpreter.get_tensor(outputs_idx['classificators']).squeeze()
-    scores = 1 / (1 + np.exp(-scores))
-    bboxes = interpreter.get_tensor(outputs_idx['regressors']).squeeze()
     print('scores.shape:', scores.shape)
+    print('scores[:10]', scores[:10])
+    scores = 1 / (1 + np.exp(-scores))
+    print('scores.shape:', scores.shape)
+    print('scores[:10]', scores[:10])
+
+    bboxes = interpreter.get_tensor(outputs_idx['regressors']).squeeze()
     print('bboxes.shape:', bboxes.shape)
+    print('bboxes[:3, :3]', bboxes[:3, :3])
 
     bboxes_decoded, landmarks, scores = decode(scores, bboxes)
+
+    print('bboxes_decoded.shape:', bboxes_decoded.shape)
+    print('landmarks.shape:', landmarks.shape)
+    print('scores.shape:', scores.shape)
+
     bboxes_decoded *= rgb_data.shape[0]
     landmarks *= rgb_data.shape[0]
     

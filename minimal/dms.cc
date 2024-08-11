@@ -78,19 +78,30 @@ std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::ve
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
     int w = inputShape.width;
     int h = inputShape.height;
+
+    std::cout << "w: " << w << std::endl;
+    std::cout << "h: " << h << std::endl;
+
     float topScore = *max_element(scores.begin(), scores.end());
+    std::cout << "topScore: " << topScore << std::endl;
+
     float scoreThresh = std::max(SCORE_THRESH, topScore);
+    std::cout << "scoreThresh: " << scoreThresh << std::endl;
+
     std::vector<cv::Rect> predBbox;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
+            std::cout << "scores[" << i << "]: " << scores[i] << std::endl;
+
             cv::Rect bbox;
             bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
             bbox.y = anchors(i, 1) + bboxes[i * 4] * w;
             bbox.width = (anchors(i, 0) + bboxes[i * 4 + 3] * h) - bbox.x;
             bbox.height = (anchors(i, 1) + bboxes[i * 4 + 2] * w) - bbox.y;
             predBbox.push_back(bbox);
+            std::cout << "bbox: " << bbox << std::endl;
 
             std::vector<cv::Point2f> landmark;
             for (int j = 0; j < 5; j++) {
@@ -98,6 +109,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 point.x = anchors(i, 0) + bboxes[i * 10 + j * 2 + 5] * h;
                 point.y = anchors(i, 1) + bboxes[i * 10 + j * 2 + 4] * w;
                 landmark.push_back(point);
+                std::cout << "landmark[" << j << "]: " << point << std::endl;
             }
             landmarks.push_back(landmark);
 
@@ -176,6 +188,18 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<cv::Rect>& bboxes, c
         cv::putText(result, scoreLabel, cv::Point2f(bboxes[i].tl()) + cv::Point2f(5, labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
     }
     return result;
+}
+
+int dumpData(const float* data) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                std::cout << data[i * 3 * 128 + j * 3 + k] << " ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    return 0;
 }
 
 int dump(cv::Mat img) {
@@ -271,6 +295,9 @@ int main(int argc, char** argv) {
     memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(cv::Vec3f));
 
     std::cout << "set input tensor done." << std::endl;
+    // dump input tensor
+    std::cout << "input tensor: " << std::endl;
+    dumpData(interpreter->typed_tensor<float>(inputIndex));
 
     // Run inference
     interpreter->Invoke();
@@ -282,6 +309,26 @@ int main(int argc, char** argv) {
     // Decode output
     std::vector<float> scores(outputClassificators->data.f, outputClassificators->data.f + outputClassificators->bytes / sizeof(float));
     std::vector<float> bboxes(outputRegressors->data.f, outputRegressors->data.f + outputRegressors->bytes / sizeof(float));
+
+    std::cout << "scores.size: " << scores.size() << std::endl;
+    std::cout << "scores: " << std::endl;
+    for (int i = 0; i < 10; i++) {
+        std::cout << scores[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // softmax: scores = 1 / (1 + np.exp(-scores))
+    for (int i = 0; i < scores.size(); i++) {
+        scores[i] = 1 / (1 + exp(-scores[i]));
+    }
+
+    std::cout << "bboxes.size: " << bboxes.size() << std::endl;
+    std::cout << "bboxes: " << std::endl;
+    for (int i = 0; i < 10; i++) {
+        std::cout << bboxes[i] << " ";
+    }
+    std::cout << std::endl;
+
     std::vector<cv::Rect> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;

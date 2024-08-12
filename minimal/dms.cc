@@ -385,6 +385,20 @@ int main(int argc, char** argv) {
     std::vector<float> predScores;
     tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(inputShape->data[2], inputShape->data[1]), anchors);
 
+    for (int i = 0; i < bboxesDecoded.size(); i++) {
+        bboxesDecoded[i][0] *= rgbResizedImage.cols;
+        bboxesDecoded[i][1] *= rgbResizedImage.rows;
+        bboxesDecoded[i][2] *= rgbResizedImage.cols;
+        bboxesDecoded[i][3] *= rgbResizedImage.rows;
+    }
+
+    for (int i = 0; i < landmarks.size(); i++) {
+        for (int j = 0; j < landmarks[i].size(); j++) {
+            landmarks[i][j].x *= rgbResizedImage.cols;
+            landmarks[i][j].y *= rgbResizedImage.rows;
+        }
+    }
+
     std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
     std::cout << "bboxesDecoded: ";
     for (int i = 0; i < bboxesDecoded.size(); i++) {
@@ -426,8 +440,25 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "bboxesFiltered.size: " << bboxesFiltered.size() << std::endl;
+    std::cout << "bboxesFiltered: ";
+    for (int i = 0; i < bboxesFiltered.size(); i++) {
+        std::cout << bboxesFiltered[i] << " ";
+    }
+    std::cout << std::endl;
+
     std::cout << "landmarksFiltered.size: " << landmarksFiltered.size() << std::endl;
+    std::cout << "landmarksFiltered: ";
+    for (int i = 0; i < landmarksFiltered.size(); i++) {
+        std::cout << landmarksFiltered[i] << " ";
+    }
+    std::cout << std::endl;
+
     std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
+    std::cout << "scoresFiltered: ";
+    for (int i = 0; i < scoresFiltered.size(); i++) {
+        std::cout << scoresFiltered[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Draw face boxes and landmarks
     cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);

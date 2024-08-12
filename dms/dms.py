@@ -310,9 +310,13 @@ if __name__ == '__main__':
     
     if len(bboxes_decoded) != 0:
         keep_mask = nms_oneclass(bboxes_decoded, scores)  # np.ones(pred_bbox.shape[0]).astype(bool)
+        print('keep_mask:', keep_mask)
         bboxes_decoded = bboxes_decoded[keep_mask]
+        print('bboxes_decoded:', bboxes_decoded)
         landmarks = landmarks[keep_mask]
+        print('landmarks:', landmarks)
         scores = scores[keep_mask]
+        print('scores:', scores)
 
     print('rgb_data.shape:', rgb_data.shape)
     print('input_shape:', input_shape)

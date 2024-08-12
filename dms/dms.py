@@ -101,17 +101,22 @@ def decode(scores, bboxes):
     landmarks = bboxes[:, 4:]
     print('landmarks.shape:', landmarks.shape)
     print('landmarks:', landmarks)
+    print('bboxes:', bboxes)
 
     print('bboxes_anchors[:, 0:1]:', bboxes_anchors[:, 0:1])
     print('bboxes_anchors[:, 1:2]:', bboxes_anchors[:, 1:2])
+    print('landmarks[:, 1::2]:', landmarks[:, 1::2])
     landmarks[:, 1::2] += bboxes_anchors[:, 0:1]
-    print('landmarks:', landmarks)
+    print('landmarks[:, 1::2]:', landmarks[:, 1::2])
+    print('landmarks[:, ::2]:', landmarks[:, ::2])
     landmarks[:, ::2] += bboxes_anchors[:, 1:2]
-    print('landmarks:', landmarks)
+    print('landmarks[:, ::2]:', landmarks[:, ::2])
+    print('landmarks[:, 1::2]:', landmarks[:, 1::2])
     landmarks[:, 1::2] /= h
-    print('landmarks:', landmarks)
+    print('landmarks[:, 1::2]:', landmarks[:, 1::2])
+    print('landmarks[:, ::2]:', landmarks[:, ::2])
     landmarks[:, ::2] /= w
-    print('landmarks:', landmarks)
+    print('landmarks[:, ::2]:', landmarks[:, ::2])
 
     print(f'pred_bbox: {pred_bbox}')
     print(f'landmarks: {landmarks}')

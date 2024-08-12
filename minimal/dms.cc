@@ -142,8 +142,8 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
 
             for (int j = 0; j < 6; j++) {
                 cv::Point2f point;
-                point.x = bboxes[i * 16 + j + 4];
-                point.y = bboxes[i * 16 + j + 5];
+                point.x = bboxes[i * 16 + j * 2 + 4];
+                point.y = bboxes[i * 16 + j * 2 + 5];
                 landmark.push_back(point);
             }
 
@@ -160,7 +160,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 landmark[j].x /= h;
                 landmark[j].y /= w;
             }
-            
+
             std::cout << "landmark: " << landmark << std::endl;
 
             landmarks.push_back(landmark);

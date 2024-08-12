@@ -228,15 +228,18 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<Eigen::Vector4d>& bb
     for (int i = 0; i < bboxes.size(); i++) {
         cv::Rect bbox(bboxes[i][0], bboxes[i][1], bboxes[i][2] - bboxes[i][0], bboxes[i][3] - bboxes[i][1]);
         cv::rectangle(result, bbox, cv::Scalar(255, 0, 0), 2);
-        for (int j = 0; j < landmarks[i].size(); j++) {
-            cv::circle(result, landmarks[i][j], 2, cv::Scalar(0, 255, 0), 2);
-            cv::putText(result, std::to_string(j), landmarks[i][j] + cv::Point2f(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
-        }
+        // for (int j = 0; j < landmarks[i].size(); j++) {
+        //     cv::circle(result, landmarks[i][j], 2, cv::Scalar(0, 255, 0), 2);
+        //     cv::putText(result, std::to_string(j), landmarks[i][j] + cv::Point2f(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+        // }
         std::string scoreLabel = std::to_string(scores[i]);
+        if (scoreLabel.length() > 4) {
+            scoreLabel = scoreLabel.substr(0, 4);
+        }
         cv::Size labelSize = cv::getTextSize(scoreLabel, cv::FONT_HERSHEY_SIMPLEX, 1.0, 2, nullptr);
-        cv::Point2f labelBottomLeft = cv::Point2f(bbox.tl().x + 10, bbox.tl().y + labelSize.height + 10);
-        cv::rectangle(result, bbox.tl(), labelBottomLeft, cv::Scalar(255, 0, 0), cv::FILLED);
-        cv::putText(result, scoreLabel, cv::Point2f(bbox.tl().x + 5, bbox.tl().x + labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+        cv::Point2f labelBottomRight = cv::Point2f(bbox.tl().x + labelSize.width + 10, bbox.tl().y + labelSize.height + 10);
+        cv::rectangle(result, bbox.tl(), labelBottomRight, cv::Scalar(255, 0, 0), cv::FILLED);
+        cv::putText(result, scoreLabel, cv::Point2f(bbox.tl().x + 5, labelBottomRight.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
     }
     return result;
 }

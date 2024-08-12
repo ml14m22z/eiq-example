@@ -213,6 +213,8 @@ def draw_face_box(image, bboxes, landmarks, scores):
         label_btmleft = bbox[:2].copy() + 10
         label_btmleft[0] += label_width
         label_btmleft[1] += label_height
+        cv2.circle(image, bbox[:2], 2, (0, 255, 0), thickness=2)
+        cv2.circle(image, label_btmleft, 2, (0, 255, 0), thickness=2)
         cv2.rectangle(image, tuple(bbox[:2]), tuple(label_btmleft), color=(255, 0, 0), thickness=cv2.FILLED)
         cv2.putText(image, score_label, (bbox[0] + 5, label_btmleft[1] - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=(255, 255, 255), thickness=2)

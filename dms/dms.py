@@ -129,6 +129,10 @@ def nms_oneclass(bbox, score, thresh = 0.4):
     y1 = bbox[:, 1]
     x2 = bbox[:, 2]
     y2 = bbox[:, 3]
+    print(f'x1: {x1}')
+    print(f'y1: {y1}')
+    print(f'x2: {x2}')
+    print(f'y2: {y2}')
 
     areas = (x2 - x1 + 1) * (y2 - y1 + 1)
     order = score.argsort()[::-1]

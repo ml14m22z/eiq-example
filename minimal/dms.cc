@@ -170,12 +170,12 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     }
     return make_tuple(pred_bbox, landmarks, predScores);
 }
-/*
-std::vector<int> nms(const std::vector<Eigen::Vector4d<float>>& bbox, const std::vector<float>& score, float thresh = 0.4) {
+
+std::vector<int> nms(const std::vector<Eigen::Vector4d>& bbox, const std::vector<float>& score, float thresh = 0.4) {
     std::vector<int> keep;
     std::vector<float> areas(bbox.size());
     for (int i = 0; i < bbox.size(); i++) {
-        areas[i] = (bbox[i].width + 1) * (bbox[i].height + 1);
+        areas[i] = (bbox[i][2] - bbox[i][0] + 1) * (bbox[i][3] - bbox[i][1] + 1);
     }
     std::vector<int> order(score.size());
     std::iota(order.begin(), order.end(), 0);
@@ -186,10 +186,10 @@ std::vector<int> nms(const std::vector<Eigen::Vector4d<float>>& bbox, const std:
         std::vector<int> inds;
         for (int j = 1; j < order.size(); j++) {
             int k = order[j];
-            int xx1 = std::max(bbox[i].x, bbox[k].x);
-            int yy1 = std::max(bbox[i].y, bbox[k].y);
-            int xx2 = std::min(bbox[i].x + bbox[i].width, bbox[k].x + bbox[k].width);
-            int yy2 = std::min(bbox[i].y + bbox[i].height, bbox[k].y + bbox[k].height);
+            int xx1 = std::max(bbox[i][0], bbox[k][0]);
+            int yy1 = std::max(bbox[i][1], bbox[k][1]);
+            int xx2 = std::min(bbox[i][2], bbox[k][2]);
+            int yy2 = std::min(bbox[i][3], bbox[k][3]);
             int w = std::max(0, xx2 - xx1 + 1);
             int h = std::max(0, yy2 - yy1 + 1);
             float inter = w * h;
@@ -206,7 +206,7 @@ std::vector<int> nms(const std::vector<Eigen::Vector4d<float>>& bbox, const std:
     }
     return keep;
 }
-*/
+
 cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize) {
     int ifmWidth = imageSize.width;
     int ifmHeight = imageSize.height;
@@ -223,21 +223,20 @@ cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize)
     return croppedImage;
 }
 
-cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<cv::Rect>& bboxes, const std::vector<std::vector<cv::Point2f>>& landmarks, const std::vector<float>& scores) {
+cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<Eigen::Vector4d>& bboxes, const std::vector<std::vector<cv::Point2f>>& landmarks, const std::vector<float>& scores) {
     cv::Mat result = image.clone();
     for (int i = 0; i < bboxes.size(); i++) {
-        cv::rectangle(result, bboxes[i], cv::Scalar(255, 0, 0), 2);
+        cv::Rect bbox(bboxes[i][0], bboxes[i][1], bboxes[i][2] - bboxes[i][0], bboxes[i][3] - bboxes[i][1]);
+        cv::rectangle(result, bbox, cv::Scalar(255, 0, 0), 2);
         for (int j = 0; j < landmarks[i].size(); j++) {
             cv::circle(result, landmarks[i][j], 2, cv::Scalar(0, 255, 0), 2);
             cv::putText(result, std::to_string(j), landmarks[i][j] + cv::Point2f(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
         }
         std::string scoreLabel = std::to_string(scores[i]);
         cv::Size labelSize = cv::getTextSize(scoreLabel, cv::FONT_HERSHEY_SIMPLEX, 1.0, 2, nullptr);
-        // cv::Point2f labelBottomLeft = bboxes[i].tl() + cv::Point2f(10, labelSize.height + 10);
-        cv::Point2f labelBottomLeft = cv::Point2f(bboxes[i].tl()) + cv::Point2f(10, labelSize.height + 10);
-        cv::rectangle(result, bboxes[i].tl(), labelBottomLeft, cv::Scalar(255, 0, 0), cv::FILLED);
-        // cv::putText(result, scoreLabel, bboxes[i].tl() + cv::Point2f(5, labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
-        cv::putText(result, scoreLabel, cv::Point2f(bboxes[i].tl()) + cv::Point2f(5, labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
+        cv::Point2f labelBottomLeft = cv::Point2f(bbox.tl().x + 10, bbox.tl().y + labelSize.height + 10);
+        cv::rectangle(result, bbox.tl(), labelBottomLeft, cv::Scalar(255, 0, 0), cv::FILLED);
+        cv::putText(result, scoreLabel, cv::Point2f(bbox.tl().x + 5, bbox.tl().x + labelBottomLeft.y - 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
     }
     return result;
 }
@@ -407,7 +406,6 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
-    /*
     // Apply NMS
     std::vector<int> keepMask = nms(bboxesDecoded, predScores);
 
@@ -418,7 +416,7 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
-    std::vector<cv::Rect> bboxesFiltered;
+    std::vector<Eigen::Vector4d> bboxesFiltered;
     std::vector<std::vector<cv::Point2f>> landmarksFiltered;
     std::vector<float> scoresFiltered;
     for (int i = 0; i < keepMask.size(); i++) {
@@ -437,7 +435,6 @@ int main(int argc, char** argv) {
     // Show images
     cv::imshow("Output", outputImage);
     cv::waitKey(0);
-    */
 
     return 0;
 }

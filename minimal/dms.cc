@@ -74,8 +74,8 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     return anchors;
 }
 
-// std::tuple<std::vector<cv::Rect>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
-auto 
+// auto 
+std::tuple<std::vector<Eigen::Vector4d>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
     int w = inputShape.width;
     int h = inputShape.height;

@@ -163,10 +163,10 @@ def resize_crop_image(
     return np.array(resized_image, dtype=np.uint8).flatten()
 
 
-def write_individual_img_cc_file(
+def write_individual_img_bin_file(
         rgb_data: np.ndarray,
         image_filename: str,
-        cc_filename: Path,
+        bin_filename: Path,
         header_template_file: str,
         array_name: str
 ):
@@ -175,27 +175,31 @@ def write_individual_img_cc_file(
 
     @param rgb_data:                Image data
     @param image_filename:          Image file name
-    @param cc_filename:             image.cc path
+    @param bin_filename:            image.bin path
     @param header_template_file:    Header template file name
     @param array_name:              C++ array name
     """
-    print(f"++ Converting {image_filename} to {cc_filename.name}")
+    print(f"++ Converting {image_filename} to {bin_filename.name}")
 
-    hdr = GenUtils.gen_header(env, header_template_file, image_filename)
+    # hdr = GenUtils.gen_header(env, header_template_file, image_filename)
 
-    if rgb_data.dtype == np.uint8 or rgb_data.dtype == np.int8:
-        hex_line_generator = (', '.join(map(hex, sub_arr))
-                          for sub_arr in np.array_split(rgb_data, math.ceil(len(rgb_data) / 20)))
-    elif rgb_data.dtype == np.float32:
-        hex_line_generator = (', '.join(struct.pack('>f', float(s - 128.) / 128.).hex() for s in sub_arr)
-                              for sub_arr in np.array_split(rgb_data, math.ceil(len(rgb_data) / 20)))
+    # if rgb_data.dtype == np.uint8 or rgb_data.dtype == np.int8:
+    #     hex_line_generator = (', '.join(map(hex, sub_arr))
+    #                       for sub_arr in np.array_split(rgb_data, math.ceil(len(rgb_data) / 20)))
+    # elif rgb_data.dtype == np.float32:
+    #     hex_line_generator = (', '.join(struct.pack('>f', float(s - 128.) / 128.).hex() for s in sub_arr)
+    #                           for sub_arr in np.array_split(rgb_data, math.ceil(len(rgb_data) / 20)))
     
-    env \
-        .get_template('image.cc.template') \
-        .stream(common_template_header=hdr,
-                var_name=array_name,
-                img_data=hex_line_generator) \
-        .dump(str(cc_filename))
+    # env \
+    #     .get_template('image.cc.template') \
+    #     .stream(common_template_header=hdr,
+    #             var_name=array_name,
+    #             img_data=hex_line_generator) \
+    #     .dump(str(bin_filename))
+
+    with open(bin_filename, 'wb') as f:
+        f.write(rgb_data.tobytes())
+
 
 
 def main(args):
@@ -226,9 +230,9 @@ def main(args):
 
         image_filenames.append(filename)
 
-        # Save the cc file
-        cc_filename = (Path(args.source_folder_path) /
-                       (Path(filename).stem.replace(" ", "_") + ".cc"))
+        # Save the bin file
+        bin_filename = (Path(args.source_folder_path) /
+                       (Path(filename).stem.replace(" ", "_") + ".bin"))
         array_name = "im" + str(image_idx)
         image_array_names.append(array_name)
 
@@ -237,22 +241,22 @@ def main(args):
         if args.float:
             rgb_data = rgb_data.astype(np.float32) / 255.0
 
-        write_individual_img_cc_file(
-            rgb_data, filename, cc_filename, args.license_template, array_name
+        write_individual_img_bin_file(
+            rgb_data, filename, bin_filename, args.license_template, array_name
         )
 
         # Increment image index
         image_idx = image_idx + 1
 
-    header_filepath = Path(args.header_folder_path) / "InputFiles.hpp"
-    common_cc_filepath = Path(args.source_folder_path) / "InputFiles.cc"
+    # header_filepath = Path(args.header_folder_path) / "InputFiles.hpp"
+    # common_cc_filepath = Path(args.source_folder_path) / "InputFiles.bin"
 
-    images_params = ImagesParams(image_idx, args.image_size, image_array_names, image_filenames)
+    # images_params = ImagesParams(image_idx, args.image_size, image_array_names, image_filenames)
 
-    if len(image_filenames) > 0:
-        write_hpp_file(images_params, header_filepath, common_cc_filepath, args.license_template)
-    else:
-        raise FileNotFoundError("No valid images found.")
+    # if len(image_filenames) > 0:
+    #     write_hpp_file(images_params, header_filepath, common_cc_filepath, args.license_template)
+    # else:
+    #     raise FileNotFoundError("No valid images found.")
 
 
 if __name__ == '__main__':

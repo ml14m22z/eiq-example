@@ -36,12 +36,17 @@ add_subdirectory(
 )
 
 set(CMAKE_CXX_STANDARD 17)
+
+# -------------------------------------
+
 add_executable(minimal
   minimal.cc
 )
 target_link_libraries(minimal
   tensorflow-lite
 )
+
+# -------------------------------------
 
 find_package(OpenCV REQUIRED)
 
@@ -59,6 +64,23 @@ target_link_libraries(dms
   tensorflow-lite
   ${OpenCV_LIBS}
 )
+
+# -------------------------------------
+
+add_executable(dms_shm
+  dms_shm.cc
+)
+
+target_include_directories(dms_shm
+  PUBLIC ./
+)
+
+target_link_libraries(dms_shm
+  tensorflow-lite
+  ${OpenCV_LIBS}
+)
+
+# -------------------------------------
 
 add_executable(imshow
   imshow.cc

@@ -75,9 +75,12 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        cv::Mat rgbImage;
+        cv::cvtColor(frame1, rgbImage, cv::COLOR_BGR2RGB);
+
         cv::Size imageSize(128, 128);
         
-        std::vector<uint8_t> data = resizeCropImage(frame1, imageSize);
+        std::vector<uint8_t> data = resizeCropImage(rgbImage, imageSize);
         cv::Mat img = cv::Mat(imageSize, CV_8UC3, data.data());
         
         // read ping pong ready signal from file pingPongReady.bin

@@ -81,14 +81,19 @@ int main(int argc, char** argv) {
         cv::Mat img = cv::Mat(imageSize, CV_8UC3, data.data());
         
         // read ping pong ready signal from file pingPongReady.bin
-        std::ifstream file("pingPongReady.bin", std::ios::binary);
-        file.read(reinterpret_cast<char*>(&pingPongReady), sizeof(pingPongReady));
-        file.close();
+        try {
+            std::ifstream file("pingPongReady.bin", std::ios::binary);
+            file.read(reinterpret_cast<char*>(&pingPongReady), sizeof(pingPongReady));
+            file.close();
 
-        if (pingPongReady != pingPongReadyLast) {
-            pingPongReadyLast = pingPongReady;
-            std::cout << "pingPongReady: " << pingPongReady << std::endl;
-            writeData("img.bin", img, pingPongReady);
+            if (pingPongReady != pingPongReadyLast) {
+                pingPongReadyLast = pingPongReady;
+                std::cout << "pingPongReady: " << pingPongReady << std::endl;
+                writeData("img.bin", data, pingPongReady);
+            }
+            
+        } catch (std::exception& e) {
+            std::cout << "Error: " << e.what() << std::endl;
         }
 
         cv::imshow("img", img);

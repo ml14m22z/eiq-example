@@ -82,6 +82,12 @@ target_link_libraries(dms_shm
 
 # -------------------------------------
 
+add_executable(dms_shm_trigger
+dms_shm_trigger.cc
+)
+
+# -------------------------------------
+
 add_executable(imshow
   imshow.cc
   InputFiles.cc

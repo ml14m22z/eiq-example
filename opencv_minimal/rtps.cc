@@ -7,8 +7,8 @@ int main(int argc, char **argv)
     // Ubuntu安装ffmpeg：sudo apt-get install ffmpeg
     // rtsp地址，模拟四路视频流进行展示
     // std::string rtsp1 = "rtsp://172.20.10.3/test";
-    std::string rtsp1 = "rtsp://172.20.10.3:10054/live/KWFY5v3Ig";
-    // std::string rtsp1 = "http://172.20.10.3:10086/fvod/OVCLGD3Ig/video.m3u8";
+    std::string rtsp1 = "rtmp://172.20.10.3:10035/live/sVNsJvqSR";
+    // std::string rtsp1 = "rtsp://172.20.10.3:10054/live/sVNsJvqSR";
     std::string rtsp2 = rtsp1;
     std::string rtsp3 = rtsp1;
     std::string rtsp4 = rtsp1;

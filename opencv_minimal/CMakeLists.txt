@@ -11,3 +11,12 @@ add_executable(minimal
 target_link_libraries(minimal
     ${OpenCV_LIBS}
 )
+
+add_executable(rtsp_demo
+  rtps.cc
+)
+
+target_link_libraries(rtsp_demo
+    ${OpenCV_LIBS}
+)
+

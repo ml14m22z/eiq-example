@@ -89,11 +89,12 @@ int main(int argc, char** argv) {
             file.read(reinterpret_cast<char*>(&pingPongReady), sizeof(pingPongReady));
             file.close();
 
-            if (pingPongReady != pingPongReadyLast) {
-                pingPongReadyLast = pingPongReady;
-                std::cout << "pingPongReady: " << pingPongReady << std::endl;
-                writeData("img.bin", data, pingPongReady);
-            }
+            writeData("img.bin", data, 0);
+            // if (pingPongReady != pingPongReadyLast) {
+            //     pingPongReadyLast = pingPongReady;
+            //     std::cout << "pingPongReady: " << pingPongReady << std::endl;
+            //     writeData("img.bin", data, pingPongReady);
+            // }
             
         } catch (std::exception& e) {
             std::cout << "Error: " << e.what() << std::endl;

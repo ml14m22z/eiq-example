@@ -21,7 +21,7 @@ resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize) {
     int left = (resizedWidth - ifmWidth) / 2;
     int top = (resizedHeight - ifmHeight) / 2;
     cv::Rect cropRegion(left, top, ifmWidth, ifmHeight);
-    cv::Mat croppedImage = resizedImage(cropRegion);
+    cv::Mat croppedImage = resizedImage(cropRegion).clone();
 
     return croppedImage;
     // // Convert to a flattened array

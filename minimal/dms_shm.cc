@@ -40,6 +40,17 @@ void dumpData(const std::string& filename, const std::vector<uint8_t>& data) {
     file.write(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
+// ping pong writer
+void writeData(const std::string& filename, const std::vector<uint8_t>& data, int pingPong) {
+    if (pingPong == 0) {
+        std::string pingPongFilename = "ping_" + filename;
+        dumpData(pingPongFilename, data);
+    } else {
+        std::string pingPongFilename = "pong_" + filename;
+        dumpData(pingPongFilename, data);
+    }
+}
+
 
 int main(int argc, char** argv) {
 
@@ -53,6 +64,9 @@ int main(int argc, char** argv) {
 
     cv::Mat frame1;
 
+    int pingPongReadyLast = 0;
+    int pingPongReady = 0; // write when signal is changed
+
     while (true)
     {
         if (!stream1.read(frame1))
@@ -65,8 +79,18 @@ int main(int argc, char** argv) {
         
         std::vector<uint8_t> data = resizeCropImage(frame1, imageSize);
         cv::Mat img = cv::Mat(imageSize, CV_8UC3, data.data());
+        
+        // read ping pong ready signal from file pingPongReady.bin
+        std::ifstream file("pingPongReady.bin", std::ios::binary);
+        file.read(reinterpret_cast<char*>(&pingPongReady), sizeof(pingPongReady));
+        file.close();
 
-        dumpData("img.bin", img);
+        if (pingPongReady != pingPongReadyLast) {
+            pingPongReadyLast = pingPongReady;
+            std::cout << "pingPongReady: " << pingPongReady << std::endl;
+            writeData("img.bin", img, pingPongReady);
+        }
+
         cv::imshow("img", img);
 
         if (cv::waitKey(1) == 'q')

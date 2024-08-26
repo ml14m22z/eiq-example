@@ -1,0 +1,1 @@
+./dms_shm rtmp://172.20.10.3:10035/live/sVNsJvqSR

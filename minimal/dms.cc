@@ -48,6 +48,8 @@ cv::Point2d camera_center;
 cv::Mat camera_matrix;
 cv::Mat dist_coeffs;
 
+const int FACE_KEY_NUM = 468;
+
 Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
     int h = inputShape.height;
@@ -299,7 +301,7 @@ int dump(cv::Mat img) {
     return 0;
 }
 
-std::tuple<cv::Mat, cv::Mat, float> align(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks) {
+std::tuple<cv::Mat, cv::Mat, float> detect_align(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks) {
     // get left and right eye
     cv::Point left_eye = landmarks[1];
     cv::Point right_eye = landmarks[0];
@@ -337,7 +339,7 @@ std::tuple<cv::Mat, cv::Mat, float> align(const cv::Mat& image, const std::vecto
 }
 
 // Method to invert the affine transformation matrix and apply it to the mesh landmarks
-std::vector<cv::Point3f> face_detector_inverse(std::vector<cv::Point3f>& mesh_landmark, cv::Mat& M) {
+std::vector<cv::Point3f> detect_inverse(std::vector<cv::Point3f>& mesh_landmark, cv::Mat& M) {
     cv::Mat M_inverse;
     cv::invertAffineTransform(M, M_inverse);
 
@@ -452,26 +454,26 @@ int main(int argc, char** argv) {
     dump(bgrResizedImage);
     cv::imshow("bgrResizedImage", bgrResizedImage);
 
-    cv::Mat inputImage;
-    rgbResizedImage.convertTo(inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
-    // bgrResizedImage.convertTo(inputImage, CV_32F, 1.0 / 256.0, 0.0);
-    std::cout << "inputImage: " << std::endl;
-    dump(inputImage);
-    cv::imshow("inputImage", inputImage);
+    cv::Mat detect_inputImage;
+    rgbResizedImage.convertTo(detect_inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
+    // bgrResizedImage.convertTo(detect_inputImage, CV_32F, 1.0 / 256.0, 0.0);
+    std::cout << "detect_inputImage: " << std::endl;
+    dump(detect_inputImage);
+    cv::imshow("detect_inputImage", detect_inputImage);
 
-    std::cout << "inputImage.size: " << inputImage.size() << std::endl;
-    // inputImage = inputImage.reshape(3, inputImage.total());
-    // std::cout << "inputImage.size: " << inputImage.size() << std::endl;
+    std::cout << "detect_inputImage.size: " << detect_inputImage.size() << std::endl;
+    // detect_inputImage = detect_inputImage.reshape(3, detect_inputImage.total());
+    // std::cout << "detect_inputImage.size: " << detect_inputImage.size() << std::endl;
 
-    std::cout << "inputImage: " << std::endl;
-    dump(inputImage);
+    std::cout << "detect_inputImage: " << std::endl;
+    dump(detect_inputImage);
     
-    std::cout << "inputImage.total: " << inputImage.total() << std::endl;
+    std::cout << "detect_inputImage.total: " << detect_inputImage.total() << std::endl;
     std::cout << "sizeof(cv::Vec3f): " << sizeof(cv::Vec3f) << std::endl;
 
     // Set input tensor
-    // memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), inputImage.data, inputImage.total() * sizeof(float));
-    memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), inputImage.data, inputImage.total() * sizeof(cv::Vec3f));
+    // memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImage.data, detect_inputImage.total() * sizeof(float));
+    memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImage.data, detect_inputImage.total() * sizeof(cv::Vec3f));
 
     std::cout << "set input tensor done." << std::endl;
     // dump input tensor
@@ -588,48 +590,81 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
-    // const cv::Size& size = bgrResizedImage.size();
-    // // Initialize focal length and camera center
-    // focal_length = size.height;
-    // camera_center = cv::Point2d(size.width / 2.0, size.height / 2.0);
-    // // Initialize camera matrix
-    // camera_matrix = (cv::Mat_<float>(3, 3) << 
-    //     focal_length, 0, camera_center.x,
-    //     0, focal_length, camera_center.y,
-    //     0, 0, 1);
-    // // Initialize distortion coefficients (assuming no lens distortion)
-    // dist_coeffs = cv::Mat::zeros(4, 1, CV_32F);
+    const cv::Size& size = bgrResizedImage.size();
+    // Initialize focal length and camera center
+    focal_length = size.height;
+    camera_center = cv::Point2d(size.width / 2.0, size.height / 2.0);
+    // Initialize camera matrix
+    camera_matrix = (cv::Mat_<float>(3, 3) << 
+        focal_length, 0, camera_center.x,
+        0, focal_length, camera_center.y,
+        0, 0, 1);
+    // Initialize distortion coefficients (assuming no lens distortion)
+    dist_coeffs = cv::Mat::zeros(4, 1, CV_32F);
 
-    // std::vector<std::vector<cv::Point>> mesh_landmarks_inverse;
-    // std::vector<cv::Mat> r_vecs;
-    // std::vector<cv::Mat> t_vecs;
+    std::vector<std::vector<cv::Point3f>> mesh_landmarks_inverse;
+    std::vector<cv::Mat> r_vecs;
+    std::vector<cv::Mat> t_vecs;
 
-    // // Loop through the bounding boxes and landmarks
-    // for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
-    //     const auto& bbox = bboxesDecoded[i];
-    //     std::vector<cv::Point2f> landmark = landmarks[i];
+    // Loop through the bounding boxes and landmarks
+    for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
+        const auto& bbox = bboxesDecoded[i];
+        std::vector<cv::Point2f> landmark = landmarks[i];
 
-    //     // Align the face
-    //     cv::Mat aligned_face, M;
-    //     float angle;
-    //     std::tie(aligned_face, M, angle) = align(bgrResizedImage, landmark);
-    //     std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
+        // Align the face
+        cv::Mat aligned_face, M;
+        float angle;
+        std::tie(aligned_face, M, angle) = detect_align(bgrResizedImage, landmark);
+        std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
 
-    //     // Perform mesh inference
-    //     std::vector<cv::Point> mesh_landmark;
-    //     std::vector<float> mesh_scores;
-    //     std::tie(mesh_landmark, mesh_scores) = face_mesher_inference(aligned_face);
+        // Perform mesh inference
+        // std::vector<cv::Point3f> mesh_landmark;
+        // std::vector<float> mesh_scores;
+        // std::tie(mesh_landmark, mesh_scores) = landmark_inference(aligned_face);
 
-    //     // Inverse the mesh landmarks
-    //     std::vector<cv::Point> mesh_landmark_inverse = face_detector_inverse(mesh_landmark, M);
-    //     mesh_landmarks_inverse.push_back(mesh_landmark_inverse);
+        cv::Size landmark_size = cv::Size(landmark_inputShape->data[2], landmark_inputShape->data[1]);
+        int h = landmark_size.height;
+        int w = landmark_size.width;
+        cv::Mat resized_aligned_face;
+        cv::resize(aligned_face, resized_aligned_face, landmark_size, 0, 0, cv::INTER_LINEAR);
+        cv::Mat landmark_inputImage;
+        resized_aligned_face.convertTo(landmark_inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
 
-    //     // Decode the pose
-    //     cv::Mat r_vec, t_vec;
-    //     std::tie(r_vec, t_vec) = face_detector.decode_pose(landmark);
-    //     r_vecs.push_back(r_vec);
-    //     t_vecs.push_back(t_vec);
-    // }
+        // Set input tensor
+        memcpy(landmark_interpreter->typed_tensor<float>(landmark_inputIndex), landmark_inputImage.data, landmark_inputImage.total() * sizeof(cv::Vec3f));
+
+        // Run inference
+        landmark_interpreter->Invoke();
+
+        // Get output tensors
+        const TfLiteTensor* landmark_outputLandmark = landmark_interpreter->tensor(landmark_outputLandmarkIndex);
+        const TfLiteTensor* landmark_outputScore = landmark_interpreter->tensor(landmark_outputScoreIndex);
+
+        // Decode output
+        std::vector<float> landmarks_data(landmark_outputLandmark->data.f, landmark_outputLandmark->data.f + landmark_outputLandmark->bytes / sizeof(float));
+        std::vector<float> scores_data(landmark_outputScore->data.f, landmark_outputScore->data.f + landmark_outputScore->bytes / sizeof(float));
+
+        std::vector<cv::Point3f> mesh_landmark(FACE_KEY_NUM);
+        for (int i = 0; i < FACE_KEY_NUM; ++i) {
+            mesh_landmark[i].x = landmarks_data[i * 3 + 0] / w * resized_aligned_face.cols;
+            mesh_landmark[i].y = landmarks_data[i * 3 + 1] / h * resized_aligned_face.rows;
+            mesh_landmark[i].z = landmarks_data[i * 3 + 2];
+        }
+
+        float mesh_scores = 1.0f / (1.0f + std::exp(-scores_data[0]));
+
+        // return std::make_tuple(mesh_landmark, mesh_scores);
+
+        // Inverse the mesh landmarks
+        std::vector<cv::Point3f> mesh_landmark_inverse = detect_inverse(mesh_landmark, M);
+        mesh_landmarks_inverse.push_back(mesh_landmark_inverse);
+
+        // Decode the pose
+        cv::Mat r_vec, t_vec;
+        std::tie(r_vec, t_vec) = decode_pose(landmark);
+        r_vecs.push_back(r_vec);
+        t_vecs.push_back(t_vec);
+    }
 
     // Draw face boxes and landmarks
     cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);

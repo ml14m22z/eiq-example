@@ -282,42 +282,42 @@ int dump(cv::Mat img) {
 int main(int argc, char** argv) {
 
     // Load model
-    std::unique_ptr<tflite::FlatBufferModel> model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
-    if (!model) {
+    std::unique_ptr<tflite::FlatBufferModel> detect_model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + DETECT_MODEL).c_str());
+    if (!detect_model) {
         std::cerr << "Failed to load model: " << DETECT_MODEL << std::endl;
         return -1;
     }
 
     // Create an interpreter
-    tflite::ops::builtin::BuiltinOpResolver resolver;
-    std::unique_ptr<tflite::Interpreter> interpreter;
-    tflite::InterpreterBuilder builder(*model, resolver);
-    if (builder(&interpreter) != kTfLiteOk) {
-        fprintf(stderr, "Failed to build interpreter\n");
+    tflite::ops::builtin::BuiltinOpResolver detect_resolver;
+    std::unique_ptr<tflite::Interpreter> detect_interpreter;
+    tflite::InterpreterBuilder builder(*detect_model, detect_resolver);
+    if (builder(&detect_interpreter) != kTfLiteOk) {
+        fprintf(stderr, "Failed to build detect_interpreter\n");
         return -1;
     }
 
 
     // Allocate tensor buffers
-    if (interpreter->AllocateTensors() != kTfLiteOk) {
+    if (detect_interpreter->AllocateTensors() != kTfLiteOk) {
         fprintf(stderr, "Failed to allocate tensors\n");
         return -1;
     }
 
     // Get input and output details
-    int inputIndex = interpreter->inputs()[0];
-    TfLiteIntArray* inputShape = interpreter->tensor(inputIndex)->dims;
-    int outputClassificatorsIndex = interpreter->outputs()[0];
-    int outputRegressorsIndex = interpreter->outputs()[1];
+    int detect_inputIndex = detect_interpreter->inputs()[0];
+    TfLiteIntArray* detect_inputShape = detect_interpreter->tensor(detect_inputIndex)->dims;
+    int detect_outputClassificatorsIndex = detect_interpreter->outputs()[0];
+    int detect_outputRegressorsIndex = detect_interpreter->outputs()[1];
 
     // Create anchors
-    Eigen::MatrixXf anchors = createAnchors(cv::Size(inputShape->data[2], inputShape->data[1]));
+    Eigen::MatrixXf anchors = createAnchors(cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
 
     // Show anchors
     // std::cout << anchors << std::endl;
 
     // Preprocess input data
-    cv::Mat rgbResizedImage(cv::Size(inputShape->data[2], inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
+    cv::Mat rgbResizedImage(cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
     std::cout << "rgbResizedImage: " << std::endl;
     dump(rgbResizedImage);
 
@@ -345,24 +345,24 @@ int main(int argc, char** argv) {
     std::cout << "sizeof(cv::Vec3f): " << sizeof(cv::Vec3f) << std::endl;
 
     // Set input tensor
-    // memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(float));
-    memcpy(interpreter->typed_tensor<float>(inputIndex), inputImage.data, inputImage.total() * sizeof(cv::Vec3f));
+    // memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), inputImage.data, inputImage.total() * sizeof(float));
+    memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), inputImage.data, inputImage.total() * sizeof(cv::Vec3f));
 
     std::cout << "set input tensor done." << std::endl;
     // dump input tensor
     std::cout << "input tensor: " << std::endl;
-    dumpData(interpreter->typed_tensor<float>(inputIndex));
+    dumpData(detect_interpreter->typed_tensor<float>(detect_inputIndex));
 
     // Run inference
-    interpreter->Invoke();
+    detect_interpreter->Invoke();
 
     // Get output tensors
-    const TfLiteTensor* outputClassificators = interpreter->tensor(outputClassificatorsIndex);
-    const TfLiteTensor* outputRegressors = interpreter->tensor(outputRegressorsIndex);
+    const TfLiteTensor* detect_outputClassificators = detect_interpreter->tensor(detect_outputClassificatorsIndex);
+    const TfLiteTensor* detect_outputRegressors = detect_interpreter->tensor(detect_outputRegressorsIndex);
 
     // Decode output
-    std::vector<float> scores(outputClassificators->data.f, outputClassificators->data.f + outputClassificators->bytes / sizeof(float));
-    std::vector<float> bboxes(outputRegressors->data.f, outputRegressors->data.f + outputRegressors->bytes / sizeof(float));
+    std::vector<float> scores(detect_outputClassificators->data.f, detect_outputClassificators->data.f + detect_outputClassificators->bytes / sizeof(float));
+    std::vector<float> bboxes(detect_outputRegressors->data.f, detect_outputRegressors->data.f + detect_outputRegressors->bytes / sizeof(float));
 
     std::cout << "scores.size: " << scores.size() << std::endl;
     std::cout << "scores: " << std::endl;
@@ -386,7 +386,7 @@ int main(int argc, char** argv) {
     std::vector<Eigen::Vector4d> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
-    tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(inputShape->data[2], inputShape->data[1]), anchors);
+    tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]), anchors);
 
     for (int i = 0; i < bboxesDecoded.size(); i++) {
         bboxesDecoded[i][0] *= rgbResizedImage.cols;

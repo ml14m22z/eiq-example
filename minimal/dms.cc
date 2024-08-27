@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 #include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -27,6 +28,25 @@ const float SCORE_THRESH = 0.9;
 const int MAX_FACE_NUM = 1;
 const std::vector<int> ANCHOR_STRIDES = {8, 16};
 const std::vector<int> ANCHOR_NUM = {2, 6};
+
+const std::vector<float> left_eye_pos = {0.38, 0.38};
+const int target_width = 192;
+const int target_height = target_width;
+
+// Initialize the 3D face model
+std::vector<cv::Point3f> FACE_MODEL_3D = {
+    cv::Point3f(-165.0f / 4.5f, 170.0f  / 4.5f, -135.0f / 4.5f),    // left eye
+    cv::Point3f(165.0f  / 4.5f, 170.0f  / 4.5f, -135.0f / 4.5f),    // right eye
+    cv::Point3f(0.0f    / 4.5f, 0.0f    / 4.5f, 0.0f    / 4.5f),    // Nose
+    cv::Point3f(0.0f    / 4.5f, -150.0f / 4.5f, -110.0f / 4.5f),    // mouth
+    cv::Point3f(-330.0f / 4.5f, 100.0f  / 4.5f, -305.0f / 4.5f),    // left face
+    cv::Point3f(330.0f  / 4.5f, 100.0f  / 4.5f, -305.0f / 4.5f)     // right face
+};
+
+float focal_length;
+cv::Point2d camera_center;
+cv::Mat camera_matrix;
+cv::Mat dist_coeffs;
 
 Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
@@ -279,6 +299,69 @@ int dump(cv::Mat img) {
     return 0;
 }
 
+std::tuple<cv::Mat, cv::Mat, float> align(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks) {
+    // get left and right eye
+    cv::Point left_eye = landmarks[1];
+    cv::Point right_eye = landmarks[0];
+
+    // compute angle
+    float dY = right_eye.y - left_eye.y;
+    float dX = right_eye.x - left_eye.x;
+    float angle = std::atan2(dY, dX) * 180.0 / CV_PI - 180.0;
+
+    // compute the location of right/left eye in new image
+    float right_eye_pos = 1.0 - left_eye_pos[0];
+
+    // get the scale based on the distance
+    float dist = std::sqrt(dY * dY + dX * dX);
+    float desired_dist = (right_eye_pos - left_eye_pos[0]) * target_width;
+    float scale = desired_dist / (dist + 1e-6);
+
+    // get the center of eyes
+    cv::Point2f eye_center((left_eye.x + right_eye.x) * 0.5, (left_eye.y + right_eye.y) * 0.5);
+
+    // get transformation matrix
+    cv::Mat M = cv::getRotationMatrix2D(eye_center, angle, scale);
+
+    // align the center
+    float tX = target_width * 0.5;
+    float tY = target_height * left_eye_pos[1];
+    M.at<float>(0, 2) += (tX - eye_center.x);
+    M.at<float>(1, 2) += (tY - eye_center.y);  // update translation vector
+
+    // apply affine transformation
+    cv::Mat output;
+    cv::warpAffine(image, output, M, cv::Size(target_width, target_height), cv::INTER_CUBIC);
+
+    return std::make_tuple(output, M, angle);
+}
+
+// Method to invert the affine transformation matrix and apply it to the mesh landmarks
+std::vector<cv::Point3f> face_detector_inverse(std::vector<cv::Point3f>& mesh_landmark, cv::Mat& M) {
+    cv::Mat M_inverse;
+    cv::invertAffineTransform(M, M_inverse);
+
+    std::vector<cv::Point3f> mesh_landmark_inverse;
+    for (const auto& point : mesh_landmark) {
+        float px = M_inverse.at<double>(0, 0) * point.x + M_inverse.at<double>(0, 1) * point.y + M_inverse.at<double>(0, 2);
+        float py = M_inverse.at<double>(1, 0) * point.x + M_inverse.at<double>(1, 1) * point.y + M_inverse.at<double>(1, 2);
+        mesh_landmark_inverse.emplace_back(cv::Point3f(px, py, point.z));
+    }
+
+    return mesh_landmark_inverse;
+}
+
+// Method to solve the PnP problem and return the rotation and translation vectors
+std::tuple<cv::Mat, cv::Mat> decode_pose(std::vector<cv::Point2f>& landmarks) {
+    cv::Mat rotation_vector, translation_vector;
+
+    // Assuming FACE_MODEL_3D, camera_matrix, and dist_coeffs are defined elsewhere
+    cv::solvePnP(FACE_MODEL_3D, landmarks, camera_matrix, dist_coeffs, rotation_vector, translation_vector);
+
+    return std::make_tuple(rotation_vector, translation_vector);
+}
+
+
 int main(int argc, char** argv) {
 
     // Load model
@@ -504,6 +587,49 @@ int main(int argc, char** argv) {
         std::cout << scoresFiltered[i] << " ";
     }
     std::cout << std::endl;
+
+    // const cv::Size& size = bgrResizedImage.size();
+    // // Initialize focal length and camera center
+    // focal_length = size.height;
+    // camera_center = cv::Point2d(size.width / 2.0, size.height / 2.0);
+    // // Initialize camera matrix
+    // camera_matrix = (cv::Mat_<float>(3, 3) << 
+    //     focal_length, 0, camera_center.x,
+    //     0, focal_length, camera_center.y,
+    //     0, 0, 1);
+    // // Initialize distortion coefficients (assuming no lens distortion)
+    // dist_coeffs = cv::Mat::zeros(4, 1, CV_32F);
+
+    // std::vector<std::vector<cv::Point>> mesh_landmarks_inverse;
+    // std::vector<cv::Mat> r_vecs;
+    // std::vector<cv::Mat> t_vecs;
+
+    // // Loop through the bounding boxes and landmarks
+    // for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
+    //     const auto& bbox = bboxesDecoded[i];
+    //     std::vector<cv::Point2f> landmark = landmarks[i];
+
+    //     // Align the face
+    //     cv::Mat aligned_face, M;
+    //     float angle;
+    //     std::tie(aligned_face, M, angle) = align(bgrResizedImage, landmark);
+    //     std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
+
+    //     // Perform mesh inference
+    //     std::vector<cv::Point> mesh_landmark;
+    //     std::vector<float> mesh_scores;
+    //     std::tie(mesh_landmark, mesh_scores) = face_mesher_inference(aligned_face);
+
+    //     // Inverse the mesh landmarks
+    //     std::vector<cv::Point> mesh_landmark_inverse = face_detector_inverse(mesh_landmark, M);
+    //     mesh_landmarks_inverse.push_back(mesh_landmark_inverse);
+
+    //     // Decode the pose
+    //     cv::Mat r_vec, t_vec;
+    //     std::tie(r_vec, t_vec) = face_detector.decode_pose(landmark);
+    //     r_vecs.push_back(r_vec);
+    //     t_vecs.push_back(t_vec);
+    // }
 
     // Draw face boxes and landmarks
     cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);

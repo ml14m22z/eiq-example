@@ -287,20 +287,52 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to load model: " << DETECT_MODEL << std::endl;
         return -1;
     }
+    std::unique_ptr<tflite::FlatBufferModel> landmark_model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + LANDMARK_MODEL).c_str());
+    if (!detect_model) {
+        std::cerr << "Failed to load model: " << LANDMARK_MODEL << std::endl;
+        return -1;
+    }
+    std::unique_ptr<tflite::FlatBufferModel> eye_model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + EYE_MODEL).c_str());
+    if (!detect_model) {
+        std::cerr << "Failed to load model: " << EYE_MODEL << std::endl;
+        return -1;
+    }
 
     // Create an interpreter
     tflite::ops::builtin::BuiltinOpResolver detect_resolver;
     std::unique_ptr<tflite::Interpreter> detect_interpreter;
-    tflite::InterpreterBuilder builder(*detect_model, detect_resolver);
-    if (builder(&detect_interpreter) != kTfLiteOk) {
+    tflite::InterpreterBuilder detect_builder(*detect_model, detect_resolver);
+    if (detect_builder(&detect_interpreter) != kTfLiteOk) {
         fprintf(stderr, "Failed to build detect_interpreter\n");
+        return -1;
+    }
+    tflite::ops::builtin::BuiltinOpResolver landmark_resolver;
+    std::unique_ptr<tflite::Interpreter> landmark_interpreter;
+    tflite::InterpreterBuilder landmark_builder(*landmark_model, landmark_resolver);
+    if (landmark_builder(&landmark_interpreter) != kTfLiteOk) {
+        fprintf(stderr, "Failed to build landmark_interpreter\n");
+        return -1;
+    }
+    tflite::ops::builtin::BuiltinOpResolver eye_resolver;
+    std::unique_ptr<tflite::Interpreter> eye_interpreter;
+    tflite::InterpreterBuilder eye_builder(*eye_model, eye_resolver);
+    if (eye_builder(&eye_interpreter) != kTfLiteOk) {
+        fprintf(stderr, "Failed to build eye_interpreter\n");
         return -1;
     }
 
 
     // Allocate tensor buffers
     if (detect_interpreter->AllocateTensors() != kTfLiteOk) {
-        fprintf(stderr, "Failed to allocate tensors\n");
+        fprintf(stderr, "Failed to allocate detect tensors\n");
+        return -1;
+    }
+    if (landmark_interpreter->AllocateTensors() != kTfLiteOk) {
+        fprintf(stderr, "Failed to allocate landmark tensors\n");
+        return -1;
+    }
+    if (eye_interpreter->AllocateTensors() != kTfLiteOk) {
+        fprintf(stderr, "Failed to allocate eye tensors\n");
         return -1;
     }
 
@@ -309,6 +341,16 @@ int main(int argc, char** argv) {
     TfLiteIntArray* detect_inputShape = detect_interpreter->tensor(detect_inputIndex)->dims;
     int detect_outputClassificatorsIndex = detect_interpreter->outputs()[0];
     int detect_outputRegressorsIndex = detect_interpreter->outputs()[1];
+
+    int landmark_inputIndex = landmark_interpreter->inputs()[0];
+    TfLiteIntArray* landmark_inputShape = landmark_interpreter->tensor(landmark_inputIndex)->dims;
+    int landmark_outputLandmarkIndex = landmark_interpreter->outputs()[0];
+    int landmark_outputScoreIndex = landmark_interpreter->outputs()[1];
+
+    int eye_inputIndex = eye_interpreter->inputs()[0];
+    TfLiteIntArray* eye_inputShape = eye_interpreter->tensor(eye_inputIndex)->dims;
+    int eye_outputIrisIndex = eye_interpreter->outputs()[0];
+    int eye_outputEyeIndex = eye_interpreter->outputs()[1];
 
     // Create anchors
     Eigen::MatrixXf anchors = createAnchors(cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));

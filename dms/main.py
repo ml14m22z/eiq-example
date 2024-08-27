@@ -63,6 +63,10 @@ def padding(image):
 def main(image):
     print('image.shape:', image.shape)
 
+    image = cv2.resize(image, (128, 128)).astype(np.uint8)
+
+    print('image.shape:', image.shape)
+
     # pad image
     padded = padding(image)
 
@@ -77,7 +81,7 @@ def main(image):
     image_show = padded.copy()
 
     for i, (bbox, landmark) in enumerate(zip(bboxes_decoded, landmarks)):
-        # print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
+        print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
         # landmark detection
         aligned_face, M, angel = face_detector.align(padded, landmark)
         print(f'{aligned_face}, {M}, {angel} = face_detector.align(padded, landmark)')

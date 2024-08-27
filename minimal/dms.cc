@@ -50,6 +50,19 @@ cv::Mat dist_coeffs;
 
 const int FACE_KEY_NUM = 468;
 
+int savetxt(const std::string& filename, const std::vector<auto>& data) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return -1;
+    }
+    for (const auto& d : data) {
+        file << d << std::endl;
+    }
+    file.close();
+    return 0;
+}
+
 Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
     int h = inputShape.height;
@@ -99,6 +112,9 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
 // auto 
 std::tuple<std::vector<Eigen::Vector4d>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
+    savetxt("scores.txt", scores);
+    savetxt("bboxes.txt", bboxes);
+    
     int w = inputShape.width;
     int h = inputShape.height;
 
@@ -141,6 +157,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
             std::cout << "btmright_x: " << btmright_x << std::endl;
             std::cout << "btmright_y: " << btmright_y << std::endl;
             pred_bbox.push_back(Eigen::Vector4d(topleft_x, topleft_y, btmright_x, btmright_y));
+            std::cout << "pred_bbox: " << pred_bbox.back() << std::endl;
 
             // cv::Rect bbox;
             // bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
@@ -607,15 +624,21 @@ int main(int argc, char** argv) {
     std::vector<cv::Mat> t_vecs;
 
     // Loop through the bounding boxes and landmarks
+    std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
     for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
         const auto& bbox = bboxesDecoded[i];
         std::vector<cv::Point2f> landmark = landmarks[i];
+        std::cout << "Bbox: " << bbox << std::endl;
+        std::cout << "Landmark: " << landmark << std::endl;
 
         // Align the face
         cv::Mat aligned_face, M;
         float angle;
         std::tie(aligned_face, M, angle) = detect_align(bgrResizedImage, landmark);
-        std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
+        // std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
+        std::cout << "Aligned face: " << std::endl;
+        dump(aligned_face);
+        std::cout << "M: " << M << ", Angle: " << angle << std::endl;
 
         // Perform mesh inference
         // std::vector<cv::Point3f> mesh_landmark;

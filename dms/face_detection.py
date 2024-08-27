@@ -95,6 +95,11 @@ class FaceDetector:
         cls_mask = scores >= max(SCORE_THRESH, top_score)
         if cls_mask.sum() == 0:
             return np.array([]), np.array([]), np.array([])
+        print('cls_mask:', np.argmax(cls_mask))
+        print('scores:', scores)
+        print('bboxes:', bboxes)
+        np.savetxt('scores.txt',scores)
+        np.savetxt('bboxes.txt',bboxes)
 
         scores = scores[cls_mask]
         bboxes = bboxes[cls_mask]
@@ -115,6 +120,7 @@ class FaceDetector:
         btmright_y = bboxes_decoded[:, 0] + pred_h * 0.5
 
         pred_bbox = np.stack([topleft_x, topleft_y, btmright_x, btmright_y], axis=-1)
+        print('pred_bbox:', pred_bbox)
 
         # decode landmarks
         landmarks = bboxes[:, 4:]

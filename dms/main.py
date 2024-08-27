@@ -13,50 +13,25 @@ from face_detection import *
 from eye_landmark import EyeMesher
 from face_landmark import FaceMesher
 from utils import *
+import os
 
 MODEL_PATH = pathlib.Path("../models/")
 DETECT_MODEL = "face_detection_front_128_full_integer_quant.tflite"
 LANDMARK_MODEL = "face_landmark_192_integer_quant.tflite"
 EYE_MODEL = "iris_landmark_quant.tflite"
 
-# turn on camera
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    '-i',
-    '--input',
-    default='/dev/video0',
-    help='input to be classified')
-parser.add_argument(
-    '-d',
-    '--delegate',
-    default='',
-    help='delegate path')
-args = parser.parse_args()
-
-if args.input.isdigit():
-    cap_input = int(args.input)
-else:
-    cap_input = args.input
-cap = cv2.VideoCapture(cap_input)
-ret, image = cap.read()
-if not ret:
-    print("Can't read frame from source file ", args.input)
-    sys.exit(-1)
-
-h, w, _ = image.shape
-target_dim = max(w, h)
-
-# instantiate face models
-face_detector = FaceDetector(model_path = str(MODEL_PATH / DETECT_MODEL),
-                             delegate_path = args.delegate,
-                             img_size = (target_dim, target_dim))
-face_mesher = FaceMesher(model_path=str((MODEL_PATH / LANDMARK_MODEL)), delegate_path = args.delegate)
-eye_mesher = EyeMesher(model_path=str((MODEL_PATH / EYE_MODEL)), delegate_path = args.delegate)
 
 def draw_face_box(image, bboxes, landmarks, scores):
     for bbox, landmark, score in zip(bboxes.astype(int), landmarks.astype(int), scores):
+        # print(f'{bbox}, {landmark}, {score} = zip(bboxes.astype(int), landmarks.astype(int), scores)')
         image = cv2.rectangle(image, tuple(bbox[:2]), tuple(bbox[2:]), color=(255, 0, 0), thickness=2)
         landmark = landmark.reshape(-1, 2)
+        # print(f'{landmark} = landmark.reshape(-1, 2)')
+        # draw face landmarks
+        # for i, l in enumerate(landmark):
+        #     cv2.circle(image, tuple(l), 2, (0, 255, 0), thickness=2)
+        #     cv2.putText(image, str(i), (tuple(l)[0] + 5, tuple(l)[1] + 5),
+        #         cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=(255, 255, 255), thickness=2)
 
         score_label = "{:.2f}".format(score)
         (label_width, label_height), baseline = cv2.getTextSize(score_label,
@@ -71,26 +46,41 @@ def draw_face_box(image, bboxes, landmarks, scores):
                     cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=(255, 255, 255), thickness=2)
     return image
 
-# detect single frame
-def main(image):
-    # pad image
+def padding(image):
+    h, w, _ = image.shape
+    target_dim = max(w, h)
     padded_size = [(target_dim - h) // 2, (target_dim - h + 1) // 2,
                 (target_dim - w) // 2, (target_dim - w + 1) // 2]
     padded = cv2.copyMakeBorder(image.copy(),
                                 *padded_size,
                                 cv2.BORDER_CONSTANT,
                                 value=[0, 0, 0])
-    padded = cv2.flip(padded, 3)
+    # padded = cv2.flip(padded, 3)
+    print('padded_size:', padded_size)
+    return padded
+
+# detect single frame
+def main(image):
+    print('image.shape:', image.shape)
+
+    # pad image
+    padded = padding(image)
+
+    print('padded.shape:', padded.shape)
 
     # face detection
     bboxes_decoded, landmarks, scores = face_detector.inference(padded)
+    # print(f'{bboxes_decoded}, {landmarks}, {scores} = face_detector.inference(padded)')
 
     mesh_landmarks_inverse = []
     r_vecs, t_vecs = [], []
+    image_show = padded.copy()
 
     for i, (bbox, landmark) in enumerate(zip(bboxes_decoded, landmarks)):
+        # print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
         # landmark detection
         aligned_face, M, angel = face_detector.align(padded, landmark)
+        print(f'{aligned_face}, {M}, {angel} = face_detector.align(padded, landmark)')
         mesh_landmark, mesh_scores = face_mesher.inference(aligned_face)
         mesh_landmark_inverse = face_detector.inverse(mesh_landmark, M)
         mesh_landmarks_inverse.append(mesh_landmark_inverse)
@@ -101,9 +91,13 @@ def main(image):
         t_vecs.append(t_vec)
 
     # draw
-    image_show = padded.copy()
     draw_face_box(image_show, bboxes_decoded, landmarks, scores)
     for i, (mesh_landmark, r_vec, t_vec) in enumerate(zip(mesh_landmarks_inverse, r_vecs, t_vecs)):
+
+        print('len(mesh_landmark):', len(mesh_landmark))
+        # for _, l in enumerate(mesh_landmark[:, :2].astype(int)):
+        #     cv2.circle(image_show, (l[0],  l[1]) , 1, (0, 255, 0), thickness=1)
+
         mouth_ratio = get_mouth_ratio(mesh_landmark, image_show)
         left_box, right_box = get_eye_boxes(mesh_landmark, padded.shape)
 
@@ -111,14 +105,23 @@ def main(image):
         right_eye_img = padded[right_box[0][1]:right_box[1][1], right_box[0][0]:right_box[1][0]]
         left_eye_landmarks, left_iris_landmarks = eye_mesher.inference(left_eye_img)
         right_eye_landmarks, right_iris_landmarks = eye_mesher.inference(right_eye_img)
-        #cv2.rectangle(image_show, left_box[0], left_box[1], color=(255, 0, 0), thickness=2)
-        #cv2.rectangle(image_show, right_box[0], right_box[1], color=(255, 0, 0), thickness=2)
+        # draw eye bbox
+        # cv2.rectangle(image_show, left_box[0], left_box[1], color=(255, 0, 0), thickness=2)
+        # for _, l in enumerate(left_eye_landmarks[:, :2].astype(int)):
+        #     cv2.circle(image_show, (left_box[0][0]+l[0],  left_box[0][1]+l[1]) , 2, (0, 255, 0), thickness=2)
+        # cv2.rectangle(image_show, right_box[0], right_box[1], color=(255, 0, 0), thickness=2)
+        # for _, l in enumerate(right_eye_landmarks[:, :2].astype(int)):
+        #     cv2.circle(image_show, (right_box[0][0]+l[0],  right_box[0][1]+l[1]) , 2, (0, 255, 0), thickness=2)
         left_eye_ratio = get_eye_ratio(left_eye_landmarks, image_show, left_box[0])
         right_eye_ratio = get_eye_ratio(right_eye_landmarks, image_show, right_box[0])
 
         pitch, roll, yaw = get_face_angle(r_vec, t_vec)
         iris_ratio = get_iris_ratio(left_eye_landmarks, right_eye_landmarks)
 
+        h, w, _ = image.shape
+        target_dim = max(w, h)
+        padded_size = [(target_dim - h) // 2, (target_dim - h + 1) // 2,
+            (target_dim - w) // 2, (target_dim - w + 1) // 2]
         if mouth_ratio > 0.3:
             cv2.putText(image_show, "Yawning: Detected", (padded_size[2] + 70, padded_size[0] + 70),
                   fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=(255, 0, 0), thickness=2)
@@ -153,23 +156,56 @@ def main(image):
     image_show = image_show[padded_size[0]:target_dim - padded_size[1], padded_size[2]:target_dim - padded_size[3]]
     return image_show
 
+if __name__ == '__main__':
+    # turn on camera
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-i',
+        '--input',
+        default='/dev/video0',
+        help='input to be classified')
+    parser.add_argument(
+        '-d',
+        '--delegate',
+        default='',
+        help='delegate path')
+    args = parser.parse_args()
 
-# endless loop
-while ret:
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # if args.input.isdigit():
+    #     cap_input = int(args.input)
+    # else:
+    #     cap_input = args.input
+    # cap = cv2.VideoCapture(cap_input)
+    # ret, image = cap.read()
+    # if not ret:
+    #     print("Can't read frame from source file ", args.input)
+    #     sys.exit(-1)
+
+    image = cv2.imread(args.input)
+
+    # instantiate face models
+    face_detector = FaceDetector(model_path = str(MODEL_PATH / DETECT_MODEL),
+                                delegate_path = args.delegate,
+                                img_size = (max(image.shape[:2]), max(image.shape[:2])))
+    face_mesher = FaceMesher(model_path=str((MODEL_PATH / LANDMARK_MODEL)), delegate_path = args.delegate)
+    eye_mesher = EyeMesher(model_path=str((MODEL_PATH / EYE_MODEL)), delegate_path = args.delegate)
+
+    # endless loop
+    image_bgr = image.copy()
+
+    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+
     # detect single
-    image_show = main(image)
+    image_show_rgb = main(image_rgb)
 
     # put fps
-    result = cv2.cvtColor(image_show, cv2.COLOR_RGB2BGR)
+    result_bgr = cv2.cvtColor(image_show_rgb, cv2.COLOR_RGB2BGR)
 
     # display the result
-    cv2.imshow('demo', result)
+    cv2.imshow('image_bgr', image_bgr)
+    cv2.imshow('demo', result_bgr)
 
-    ret, image = cap.read()
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-time.sleep(2)
-cap.release()
-cv2.destroyAllWindows()
+    while True:
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()

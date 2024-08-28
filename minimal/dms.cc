@@ -63,6 +63,40 @@ int savetxt(const std::string& filename, const std::vector<auto>& data) {
     return 0;
 }
 
+int saveMat(const std::string& filename, const cv::Mat& data) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return -1;
+    }
+    for (int r = 0; r < data.rows; r++) {
+        for (int c = 0; c < data.cols; c++) {
+            // file << data.at<float>(r, c) << " ";
+            file << data.at<cv::Vec3b>(r, c) << std::endl;
+        }
+        // file << std::endl;
+    }
+    file.close();
+    return 0;
+}
+
+int saveMat3f(const std::string& filename, const cv::Mat& data) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return -1;
+    }
+    for (int r = 0; r < data.rows; r++) {
+        for (int c = 0; c < data.cols; c++) {
+            // file << data.at<float>(r, c) << " ";
+            file << data.at<cv::Vec3f>(r, c) << std::endl;
+        }
+        // file << std::endl;
+    }
+    file.close();
+    return 0;
+}
+
 Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
     int h = inputShape.height;
@@ -464,6 +498,7 @@ int main(int argc, char** argv) {
     cv::Mat rgbResizedImage(cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
     std::cout << "rgbResizedImage: " << std::endl;
     dump(rgbResizedImage);
+    saveMat("rgbResizedImage.txt", rgbResizedImage);
 
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
@@ -496,6 +531,11 @@ int main(int argc, char** argv) {
     // dump input tensor
     std::cout << "input tensor: " << std::endl;
     dumpData(detect_interpreter->typed_tensor<float>(detect_inputIndex));
+
+    float* tensor_data = detect_interpreter->typed_tensor<float>(detect_inputIndex);
+    int tensor_size = detect_interpreter->tensor(detect_inputIndex)->bytes / sizeof(float);
+    std::vector<float> tensor_vector(tensor_data, tensor_data + tensor_size);
+    savetxt("input.txt", tensor_vector);
 
     // Run inference
     detect_interpreter->Invoke();

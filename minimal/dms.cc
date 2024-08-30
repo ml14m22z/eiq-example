@@ -495,7 +495,11 @@ int main(int argc, char** argv) {
     // std::cout << anchors << std::endl;
 
     // Preprocess input data
-    cv::Mat rgbResizedImage(cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]), CV_8UC3, (void*)GetImgArray(0));
+    cv::Mat originalRgbImage(cv::Size(GetImgWidth(0), GetImgHeight(0)), CV_8UC3, (void*)GetImgArray(0));
+    cv::Mat originalBgrImage;
+    cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
+
+    cv::Mat rgbResizedImage = resizeCropImage(originalRgbImage, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
     std::cout << "rgbResizedImage: " << std::endl;
     dump(rgbResizedImage);
     saveMat("rgbResizedImage.txt", rgbResizedImage);
@@ -733,6 +737,7 @@ int main(int argc, char** argv) {
     cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
 
     // Show images
+    cv::imshow("Input", originalBgrImage);
     cv::imshow("Output", outputImage);
     cv::waitKey(0);
 

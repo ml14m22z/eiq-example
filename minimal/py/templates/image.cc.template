@@ -20,6 +20,9 @@
 #include "BufAttributes.hpp"
 #include <cstdint>
 
+const int {{var_name}}_width = {{img_width}};
+const int {{var_name}}_height = {{img_height}};
+
 const uint8_t {{var_name}}[] IFM_BUF_ATTRIBUTE = {
     {{img_data|join(',\n\t')}}
 };

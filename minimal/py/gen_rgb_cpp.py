@@ -122,9 +122,21 @@ def write_hpp_file(
     env \
         .get_template('Images.cc.template') \
         .stream(common_template_header=hdr,
+                var_name_widths=[n + '_width' for n in images_params.image_array_names],
+                var_name_heights=[n + '_height' for n in images_params.image_array_names],
                 var_names=images_params.image_array_names,
                 img_names=images_params.image_filenames) \
         .dump(str(cc_file_path))
+
+
+def flatten_image(image: Image.Image) -> np.ndarray:
+    """
+    Flatten image
+
+    @param image:   Image to flatten
+    @return:        Flattened image
+    """
+    return np.array(image, dtype=np.uint8).flatten()
 
 
 def resize_crop_image(
@@ -164,6 +176,8 @@ def resize_crop_image(
 
 
 def write_individual_img_cc_file(
+        width: int,
+        height: int,
         rgb_data: np.ndarray,
         image_filename: str,
         cc_filename: Path,
@@ -194,6 +208,8 @@ def write_individual_img_cc_file(
         .get_template('image.cc.template') \
         .stream(common_template_header=hdr,
                 var_name=array_name,
+                img_width=width,
+                img_height=height,
                 img_data=hex_line_generator) \
         .dump(str(cc_filename))
 
@@ -232,12 +248,17 @@ def main(args):
         array_name = "im" + str(image_idx)
         image_array_names.append(array_name)
 
-        rgb_data = resize_crop_image(original_image, args.image_size)
+        # rgb_data = resize_crop_image(original_image, args.image_size)
+        rgb_data = flatten_image(original_image)
+        print(f"++ focing image {filename} size to original size: {original_image.size}")
+        args.image_size = original_image.size
+        width, height = original_image.size
 
         if args.float:
             rgb_data = rgb_data.astype(np.float32) / 255.0
 
         write_individual_img_cc_file(
+            width, height,
             rgb_data, filename, cc_filename, args.license_template, array_name
         )
 

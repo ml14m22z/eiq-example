@@ -28,6 +28,14 @@ static const uint8_t* imgArrays[] = {
     {{ var_names|join(',\n    ') }}
 };
 
+static const int imgWidths[] = {
+    {{ var_name_widths|join(',\n    ') }}
+};
+
+static const int imgHeights[] = {
+    {{ var_name_heights|join(',\n    ') }}
+};
+
 const char* GetFilename(const uint32_t idx)
 {
     if (idx < NUMBER_OF_FILES) {
@@ -42,4 +50,20 @@ const uint8_t* GetImgArray(const uint32_t idx)
         return imgArrays[idx];
     }
     return nullptr;
+}
+
+const uint8_t GetImgWidth(const uint32_t idx)
+{
+    if (idx < NUMBER_OF_FILES) {
+        return imgWidths[idx];
+    }
+    return 0;
+}
+
+const uint8_t GetImgHeight(const uint32_t idx)
+{
+    if (idx < NUMBER_OF_FILES) {
+        return imgHeights[idx];
+    }
+    return 0;
 }

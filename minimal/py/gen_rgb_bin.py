@@ -127,6 +127,16 @@ def write_hpp_file(
         .dump(str(cc_file_path))
 
 
+def flatten_image(image: Image.Image) -> np.ndarray:
+    """
+    Flatten image
+
+    @param image:   Image to flatten
+    @return:        Flattened image
+    """
+    return np.array(image, dtype=np.uint8).flatten()
+
+
 def resize_crop_image(
         original_image: Image.Image,
         image_size: typing.Sequence
@@ -236,7 +246,8 @@ def main(args):
         array_name = "im" + str(image_idx)
         image_array_names.append(array_name)
 
-        rgb_data = resize_crop_image(original_image, args.image_size)
+        # rgb_data = resize_crop_image(original_image, args.image_size)
+        rgb_data = flatten_image(original_image)
 
         if args.float:
             rgb_data = rgb_data.astype(np.float32) / 255.0

@@ -118,7 +118,7 @@ def main(image):
         # print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
         # landmark detection
         aligned_face, M, angel = face_detector.align(padded, landmark)
-        # print(f'{aligned_face}, {M}, {angel} = face_detector.align(padded, landmark)')
+        print(f'{M}, {angel} = face_detector.align(padded, landmark)')
         mesh_landmark, mesh_scores = face_mesher.inference(aligned_face)
         mesh_landmark_inverse = face_detector.inverse(mesh_landmark, M)
         mesh_landmarks_inverse.append(mesh_landmark_inverse)

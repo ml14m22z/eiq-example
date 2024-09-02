@@ -244,7 +244,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 landmark[j].y += anchors(i, 0);
             }
 
-            std::cout << "landmark: " << landmark << std::endl;
+            // std::cout << "landmark: " << landmark << std::endl;
 
             for (int j = 0; j < 6; j++) {
                 landmark[j].x /= h;
@@ -515,38 +515,33 @@ int main(int argc, char** argv) {
     cv::Mat originalRgbImage(cv::Size(GetImgWidth(0), GetImgHeight(0)), CV_8UC3, (void*)GetImgArray(0));
     cv::Mat originalBgrImage;
     cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
-    cv::imshow("originalBgrImage", originalBgrImage);
 
     cv::Mat padded_rgb = padding(originalRgbImage);
     cv::Mat padded_bgr;
     cv::cvtColor(padded_rgb, padded_bgr, cv::COLOR_RGB2BGR);
-    cv::imshow("padded_bgr", padded_bgr);
 
     cv::Mat rgbResizedImage = resizeCropImage(padded_rgb, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
 
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
-    cv::imshow("bgrResizedImage", bgrResizedImage);
 
     cv::Mat detect_inputImageRgb;
     rgbResizedImage.convertTo(detect_inputImageRgb, CV_32FC3, 1.0 / 128.0, -1.0);
 
     cv::Mat detect_inputImageBgr;
     cv::cvtColor(detect_inputImageRgb, detect_inputImageBgr, cv::COLOR_RGB2BGR);
-    cv::imshow("detect_inputImageBgr", detect_inputImageBgr);
 
     // Set input tensor
     memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImageRgb.data, detect_inputImageRgb.total() * sizeof(cv::Vec3f));
 
-    std::cout << "set input tensor done." << std::endl;
     // dump input tensor
-    std::cout << "input tensor: " << std::endl;
-    dumpData(detect_interpreter->typed_tensor<float>(detect_inputIndex));
+    // std::cout << "input tensor: " << std::endl;
+    // dumpData(detect_interpreter->typed_tensor<float>(detect_inputIndex));
 
     float* tensor_data = detect_interpreter->typed_tensor<float>(detect_inputIndex);
     int tensor_size = detect_interpreter->tensor(detect_inputIndex)->bytes / sizeof(float);
     std::vector<float> tensor_vector(tensor_data, tensor_data + tensor_size);
-    savetxt("input.txt", tensor_vector);
+    // savetxt("input.txt", tensor_vector);
 
     // Run inference
     detect_interpreter->Invoke();
@@ -560,11 +555,11 @@ int main(int argc, char** argv) {
     std::vector<float> bboxes(detect_outputRegressors->data.f, detect_outputRegressors->data.f + detect_outputRegressors->bytes / sizeof(float));
 
     std::cout << "scores.size: " << scores.size() << std::endl;
-    std::cout << "scores: " << std::endl;
-    for (int i = 0; i < 10; i++) {
-        std::cout << scores[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "scores: " << std::endl;
+    // for (int i = 0; i < 10; i++) {
+    //     std::cout << scores[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     // softmax: scores = 1 / (1 + np.exp(-scores))
     for (int i = 0; i < scores.size(); i++) {
@@ -572,11 +567,11 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "bboxes.size: " << bboxes.size() << std::endl;
-    std::cout << "bboxes: " << std::endl;
-    for (int i = 0; i < 10; i++) {
-        std::cout << bboxes[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "bboxes: " << std::endl;
+    // for (int i = 0; i < 10; i++) {
+    //     std::cout << bboxes[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     std::vector<Eigen::Vector4d> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
@@ -685,7 +680,7 @@ int main(int argc, char** argv) {
         // Align the face
         cv::Mat aligned_face, M;
         float angle;
-        std::tie(aligned_face, M, angle) = detect_align(bgrResizedImage, landmark);
+        std::tie(aligned_face, M, angle) = detect_align(padded_rgb, landmark);
         // std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
         std::cout << "Aligned face: " << std::endl;
         dump(aligned_face);

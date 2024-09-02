@@ -745,9 +745,21 @@ int main(int argc, char** argv) {
     cv::Mat outputImageBgr;
     cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
 
+    // remove pad
+    int h = originalBgrImage.rows;
+    int w = originalBgrImage.cols;
+    int target_dim = std::max(w, h);
+    int padded_size[] = {(target_dim - h) / 2, (target_dim - h + 1) / 2,
+        (target_dim - w) / 2, (target_dim - w + 1) / 2};
+
+    cv::Rect cropRect(padded_size[2], padded_size[0], w, h);
+    cv::Mat outputImageRgbCropped = outputImageRgb(cropRect);
+    cv::Mat outputImageBgrCropped;
+    cv::cvtColor(outputImageRgbCropped, outputImageBgrCropped, cv::COLOR_RGB2BGR);
+
     // Show images
     cv::imshow("Input", originalBgrImage);
-    cv::imshow("Output", outputImageBgr);
+    cv::imshow("Output", outputImageBgrCropped);
     cv::waitKey(0);
 
     return 0;

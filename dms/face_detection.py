@@ -158,32 +158,46 @@ class FaceDetector:
         # get left and right eye
         left_eye = landmarks[1]
         right_eye = landmarks[0]
+        # print('left_eye:', left_eye)
+        # print('right_eye:', right_eye)
 
         # computer angle
         dY = right_eye[1] - left_eye[1]
         dX = right_eye[0] - left_eye[0]
         angle = np.degrees(np.arctan2(dY, dX)) - 180
+        # print('dY:', dY)
+        # print('dX:', dX)
+        # print('angle:', angle)
 
         # compute the location of right/left eye in new image
         right_eye_pos = 1 - self.left_eye_pos[0]
+        # print('right_eye_pos:', right_eye_pos)
 
         # get the scale based on the distance
         dist = np.sqrt(dY ** 2 + dX ** 2)
         desired_dist = (right_eye_pos - self.left_eye_pos[0])
         desired_dist *= self.target_width
         scale = desired_dist / (dist + 1e-6)
+        # print('dist:', dist)
+        # print('desired_dist:', desired_dist)
+        # print('scale:', scale)
 
         # get the center of eyes
         eye_center = (left_eye + right_eye) // 2
+        # print('eye_center:', eye_center)
 
         # get transformation matrix
         M = cv2.getRotationMatrix2D((int(eye_center[0]), int(eye_center[1])), angle, scale)
+        # print('M:', M)
 
         # align the center
         tX = self.target_width * 0.5
         tY = self.target_height * self.left_eye_pos[1]
         M[0, 2] += (tX - eye_center[0])
         M[1, 2] += (tY - eye_center[1])  # update translation vector
+        # print('tX:', tX)
+        # print('tY:', tY)
+        # print('M:', M)
 
         # apply affine transformation
         dst_size = (self.target_width, self.target_height)

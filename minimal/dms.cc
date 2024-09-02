@@ -373,31 +373,45 @@ std::tuple<cv::Mat, cv::Mat, float> detect_align(const cv::Mat& image, const std
     // get left and right eye
     cv::Point left_eye = landmarks[1];
     cv::Point right_eye = landmarks[0];
+    // std::cout << "left_eye: " << left_eye << std::endl;
+    // std::cout << "right_eye: " << right_eye << std::endl;
 
     // compute angle
     float dY = right_eye.y - left_eye.y;
     float dX = right_eye.x - left_eye.x;
     float angle = std::atan2(dY, dX) * 180.0 / CV_PI - 180.0;
+    // std::cout << "dY: " << dY << std::endl;
+    // std::cout << "dX: " << dX << std::endl;
+    // std::cout << "angle: " << angle << std::endl;
 
     // compute the location of right/left eye in new image
     float right_eye_pos = 1.0 - left_eye_pos[0];
+    // std::cout << "right_eye_pos: " << right_eye_pos << std::endl;
 
     // get the scale based on the distance
     float dist = std::sqrt(dY * dY + dX * dX);
     float desired_dist = (right_eye_pos - left_eye_pos[0]) * target_width;
     float scale = desired_dist / (dist + 1e-6);
+    // std::cout << "dist: " << dist << std::endl;
+    // std::cout << "desired_dist: " << desired_dist << std::endl;
+    // std::cout << "scale: " << scale << std::endl;
 
     // get the center of eyes
     cv::Point2f eye_center((left_eye.x + right_eye.x) * 0.5, (left_eye.y + right_eye.y) * 0.5);
+    // std::cout << "eye_center: " << eye_center << std::endl;
 
     // get transformation matrix
     cv::Mat M = cv::getRotationMatrix2D(eye_center, angle, scale);
+    // std::cout << "M: " << M << std::endl;
 
     // align the center
     float tX = target_width * 0.5;
     float tY = target_height * left_eye_pos[1];
-    M.at<float>(0, 2) += (tX - eye_center.x);
-    M.at<float>(1, 2) += (tY - eye_center.y);  // update translation vector
+    M.at<double>(0, 2) += (tX - eye_center.x);
+    M.at<double>(1, 2) += (tY - eye_center.y);  // update translation vector
+    // std::cout << "tX: " << tX << std::endl;
+    // std::cout << "tY: " << tY << std::endl;
+    // std::cout << "M: " << M << std::endl;
 
     // apply affine transformation
     cv::Mat output;

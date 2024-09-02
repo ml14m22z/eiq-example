@@ -667,7 +667,7 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
 
-    const cv::Size& size = bgrResizedImage.size();
+    const cv::Size& size = padded_rgb.size();
     // Initialize focal length and camera center
     focal_length = size.height;
     camera_center = cv::Point2d(size.width / 2.0, size.height / 2.0);

@@ -63,18 +63,18 @@ class FaceDetector:
         self.dist_coeffs = np.zeros((4, 1))
 
     def inference(self, img):
-        np.savetxt('img.txt', img.flatten(), fmt='%d')
+        # np.savetxt('img.txt', img.flatten(), fmt='%d')
         # convert to float32
         input_data = cv2.resize(img, tuple(self.input_shape)).astype(np.float32)
-        np.savetxt('input_data.txt', input_data.flatten())
+        # np.savetxt('input_data.txt', input_data.flatten())
         input_data = (input_data - 128.0) / 128.0
-        np.savetxt('input_data2.txt', input_data.flatten())
+        # np.savetxt('input_data2.txt', input_data.flatten())
         input_data = np.expand_dims(input_data, axis=0)
-        np.savetxt('input_data3.txt', input_data.flatten())
+        # np.savetxt('input_data3.txt', input_data.flatten())
 
         # invoke
         self.interpreter.set_tensor(self.input_idx, input_data)
-        np.savetxt('input.txt', self.interpreter.tensor(self.input_idx)().flatten())
+        # np.savetxt('input.txt', self.interpreter.tensor(self.input_idx)().flatten())
 
         self.interpreter.invoke()
         scores = self.interpreter.get_tensor(self.outputs_idx['classificators']).squeeze()
@@ -101,11 +101,11 @@ class FaceDetector:
         cls_mask = scores >= max(SCORE_THRESH, top_score)
         if cls_mask.sum() == 0:
             return np.array([]), np.array([]), np.array([])
-        print('cls_mask:', np.argmax(cls_mask))
-        print('scores:', scores)
-        print('bboxes:', bboxes)
-        np.savetxt('scores.txt',scores)
-        np.savetxt('bboxes.txt',bboxes)
+        # print('cls_mask:', np.argmax(cls_mask))
+        # print('scores:', scores)
+        # print('bboxes:', bboxes)
+        # np.savetxt('scores.txt',scores)
+        # np.savetxt('bboxes.txt',bboxes)
 
         scores = scores[cls_mask]
         bboxes = bboxes[cls_mask]

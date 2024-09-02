@@ -515,15 +515,18 @@ int main(int argc, char** argv) {
     cv::Mat originalRgbImage(cv::Size(GetImgWidth(0), GetImgHeight(0)), CV_8UC3, (void*)GetImgArray(0));
     cv::Mat originalBgrImage;
     cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
+    cv::imshow("originalBgrImage", originalBgrImage);
 
-    cv::Mat padded_bgr = padding(originalRgbImage);
-    cv::Mat padded_rgb;
-    cv::cvtColor(padded_bgr, padded_rgb, cv::COLOR_BGR2RGB);
+    cv::Mat padded_rgb = padding(originalRgbImage);
+    cv::Mat padded_bgr;
+    cv::cvtColor(padded_rgb, padded_bgr, cv::COLOR_RGB2BGR);
+    cv::imshow("padded_bgr", padded_bgr);
 
     cv::Mat rgbResizedImage = resizeCropImage(padded_rgb, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
 
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
+    cv::imshow("bgrResizedImage", bgrResizedImage);
 
     cv::Mat detect_inputImageRgb;
     rgbResizedImage.convertTo(detect_inputImageRgb, CV_32FC3, 1.0 / 128.0, -1.0);
@@ -738,11 +741,13 @@ int main(int argc, char** argv) {
     }
 
     // Draw face boxes and landmarks
-    cv::Mat outputImage = drawFaceBox(originalBgrImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
+    cv::Mat outputImageRgb = drawFaceBox(padded_rgb, bboxesFiltered, landmarksFiltered, scoresFiltered);
+    cv::Mat outputImageBgr;
+    cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
 
     // Show images
     cv::imshow("Input", originalBgrImage);
-    cv::imshow("Output", outputImage);
+    cv::imshow("Output", outputImageBgr);
     cv::waitKey(0);
 
     return 0;

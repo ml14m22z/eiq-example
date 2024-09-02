@@ -52,7 +52,7 @@ const uint8_t* GetImgArray(const uint32_t idx)
     return nullptr;
 }
 
-const uint8_t GetImgWidth(const uint32_t idx)
+const int GetImgWidth(const uint32_t idx)
 {
     if (idx < NUMBER_OF_FILES) {
         return imgWidths[idx];
@@ -60,7 +60,7 @@ const uint8_t GetImgWidth(const uint32_t idx)
     return 0;
 }
 
-const uint8_t GetImgHeight(const uint32_t idx)
+const int GetImgHeight(const uint32_t idx)
 {
     if (idx < NUMBER_OF_FILES) {
         return imgHeights[idx];

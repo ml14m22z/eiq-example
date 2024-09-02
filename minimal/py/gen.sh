@@ -14,3 +14,7 @@ python gen_rgb_bin.py \
     --source_folder_path ${src_out_abs} \
     --header_folder_path ${hdr_out_abs} \
     --image_size ${img_size} ${img_size}
+
+mv *.cc ../
+mv *.hpp ../
+mv *.bin ../

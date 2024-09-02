@@ -584,16 +584,16 @@ int main(int argc, char** argv) {
     tie(bboxesDecoded, landmarks, predScores) = decode(scores, bboxes, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]), anchors);
 
     for (int i = 0; i < bboxesDecoded.size(); i++) {
-        bboxesDecoded[i][0] *= rgbResizedImage.cols;
-        bboxesDecoded[i][1] *= rgbResizedImage.rows;
-        bboxesDecoded[i][2] *= rgbResizedImage.cols;
-        bboxesDecoded[i][3] *= rgbResizedImage.rows;
+        bboxesDecoded[i][0] *= padded_rgb.cols;
+        bboxesDecoded[i][1] *= padded_rgb.rows;
+        bboxesDecoded[i][2] *= padded_rgb.cols;
+        bboxesDecoded[i][3] *= padded_rgb.rows;
     }
 
     for (int i = 0; i < landmarks.size(); i++) {
         for (int j = 0; j < landmarks[i].size(); j++) {
-            landmarks[i][j].x *= rgbResizedImage.cols;
-            landmarks[i][j].y *= rgbResizedImage.rows;
+            landmarks[i][j].x *= padded_rgb.cols;
+            landmarks[i][j].y *= padded_rgb.rows;
         }
     }
 

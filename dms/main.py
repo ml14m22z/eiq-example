@@ -221,27 +221,27 @@ if __name__ == '__main__':
 
     # cv2_image = cv2.imread(args.input)
     pil_image = Image.open(args.input).convert("RGB")
-    image = np.array(pil_image)
+    original_image = np.array(pil_image)
 
-    print('image.shape:', image.shape)
+    print('original_image.shape:', original_image.shape)
 
-    image = resize_crop_image(pil_image, [128, 128])
-    image = np.array(image).reshape(128, 128, 3)
+    resized_image = resize_crop_image(pil_image, [128, 128])
+    resized_image = np.array(resized_image).reshape(128, 128, 3)
 
-    print('image.shape:', image.shape)
-    np.savetxt('image.txt', image.flatten(), fmt='%d')
+    print('resized_image.shape:', resized_image.shape)
+    np.savetxt('resized_image.txt', resized_image.flatten(), fmt='%d')
 
     # instantiate face models
     face_detector = FaceDetector(model_path = str(MODEL_PATH / DETECT_MODEL),
                                 delegate_path = args.delegate,
-                                img_size = (max(image.shape[:2]), max(image.shape[:2])))
+                                img_size = (max(resized_image.shape[:2]), max(resized_image.shape[:2])))
     face_mesher = FaceMesher(model_path=str((MODEL_PATH / LANDMARK_MODEL)), delegate_path = args.delegate)
     eye_mesher = EyeMesher(model_path=str((MODEL_PATH / EYE_MODEL)), delegate_path = args.delegate)
 
     # endless loop
-    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    image_bgr = cv2.cvtColor(resized_image, cv2.COLOR_RGB2BGR)
 
-    image_rgb = image.copy()
+    image_rgb = resized_image.copy()
 
     # detect single
     image_show_rgb = main(image_rgb)

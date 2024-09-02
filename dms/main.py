@@ -115,10 +115,10 @@ def main(image):
     image_show = padded.copy()
 
     for i, (bbox, landmark) in enumerate(zip(bboxes_decoded, landmarks)):
-        print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
+        # print(f'{i}: {bbox}, {landmark} = zip(bboxes_decoded, landmarks)')
         # landmark detection
         aligned_face, M, angel = face_detector.align(padded, landmark)
-        print(f'{aligned_face}, {M}, {angel} = face_detector.align(padded, landmark)')
+        # print(f'{aligned_face}, {M}, {angel} = face_detector.align(padded, landmark)')
         mesh_landmark, mesh_scores = face_mesher.inference(aligned_face)
         mesh_landmark_inverse = face_detector.inverse(mesh_landmark, M)
         mesh_landmarks_inverse.append(mesh_landmark_inverse)
@@ -132,7 +132,7 @@ def main(image):
     draw_face_box(image_show, bboxes_decoded, landmarks, scores)
     for i, (mesh_landmark, r_vec, t_vec) in enumerate(zip(mesh_landmarks_inverse, r_vecs, t_vecs)):
 
-        print('len(mesh_landmark):', len(mesh_landmark))
+        # print('len(mesh_landmark):', len(mesh_landmark))
         # for _, l in enumerate(mesh_landmark[:, :2].astype(int)):
         #     cv2.circle(image_show, (l[0],  l[1]) , 1, (0, 255, 0), thickness=1)
 
@@ -223,34 +223,18 @@ if __name__ == '__main__':
     pil_image = Image.open(args.input).convert("RGB")
     original_image = np.array(pil_image)
 
-    print('original_image.shape:', original_image.shape)
-
-    resized_image = resize_crop_image(pil_image, [128, 128])
-    resized_image = np.array(resized_image).reshape(128, 128, 3)
-
-    print('resized_image.shape:', resized_image.shape)
-    np.savetxt('resized_image.txt', resized_image.flatten(), fmt='%d')
-
     # instantiate face models
     face_detector = FaceDetector(model_path = str(MODEL_PATH / DETECT_MODEL),
                                 delegate_path = args.delegate,
-                                img_size = (max(resized_image.shape[:2]), max(resized_image.shape[:2])))
+                                img_size = (max(original_image.shape[:2]), max(original_image.shape[:2])))
     face_mesher = FaceMesher(model_path=str((MODEL_PATH / LANDMARK_MODEL)), delegate_path = args.delegate)
     eye_mesher = EyeMesher(model_path=str((MODEL_PATH / EYE_MODEL)), delegate_path = args.delegate)
 
-    # endless loop
-    image_bgr = cv2.cvtColor(resized_image, cv2.COLOR_RGB2BGR)
-
-    image_rgb = resized_image.copy()
-
-    # detect single
-    image_show_rgb = main(image_rgb)
-
-    # put fps
+    image_show_rgb = main(original_image)
     result_bgr = cv2.cvtColor(image_show_rgb, cv2.COLOR_RGB2BGR)
 
     # display the result
-    cv2.imshow('image_bgr', image_bgr)
+    cv2.imshow('original_image', cv2.cvtColor(original_image, cv2.COLOR_RGB2BGR))
     cv2.imshow('demo', result_bgr)
 
     while True:

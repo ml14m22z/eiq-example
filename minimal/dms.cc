@@ -97,6 +97,23 @@ int saveMat3f(const std::string& filename, const cv::Mat& data) {
     return 0;
 }
 
+cv::Mat padding(const cv::Mat& image) {
+    int h = image.rows;
+    int w = image.cols;
+    int target_dim = std::max(w, h);
+    int top = (target_dim - h) / 2;
+    int bottom = (target_dim - h + 1) / 2;
+    int left = (target_dim - w) / 2;
+    int right = (target_dim - w + 1) / 2;
+
+    cv::Mat padded;
+    cv::copyMakeBorder(image, padded, top, bottom, left, right, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+
+    std::cout << "padded_size: [" << top << ", " << bottom << ", " << left << ", " << right << "]" << std::endl;
+
+    return padded;
+}
+
 Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
     int w = inputShape.width;
     int h = inputShape.height;
@@ -499,37 +516,24 @@ int main(int argc, char** argv) {
     cv::Mat originalBgrImage;
     cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
 
-    cv::Mat rgbResizedImage = resizeCropImage(originalRgbImage, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
-    std::cout << "rgbResizedImage: " << std::endl;
-    dump(rgbResizedImage);
-    saveMat("rgbResizedImage.txt", rgbResizedImage);
+    cv::Mat padded_bgr = padding(originalRgbImage);
+    cv::Mat padded_rgb;
+    cv::cvtColor(padded_bgr, padded_rgb, cv::COLOR_BGR2RGB);
+
+    cv::Mat rgbResizedImage = resizeCropImage(padded_rgb, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
 
     cv::Mat bgrResizedImage;
     cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
-    std::cout << "bgrResizedImage: " << std::endl;
-    dump(bgrResizedImage);
-    cv::imshow("bgrResizedImage", bgrResizedImage);
 
-    cv::Mat detect_inputImage;
-    rgbResizedImage.convertTo(detect_inputImage, CV_32FC3, 1.0 / 128.0, -1.0);
-    // bgrResizedImage.convertTo(detect_inputImage, CV_32F, 1.0 / 256.0, 0.0);
-    std::cout << "detect_inputImage: " << std::endl;
-    dump(detect_inputImage);
-    cv::imshow("detect_inputImage", detect_inputImage);
+    cv::Mat detect_inputImageRgb;
+    rgbResizedImage.convertTo(detect_inputImageRgb, CV_32FC3, 1.0 / 128.0, -1.0);
 
-    std::cout << "detect_inputImage.size: " << detect_inputImage.size() << std::endl;
-    // detect_inputImage = detect_inputImage.reshape(3, detect_inputImage.total());
-    // std::cout << "detect_inputImage.size: " << detect_inputImage.size() << std::endl;
-
-    std::cout << "detect_inputImage: " << std::endl;
-    dump(detect_inputImage);
-    
-    std::cout << "detect_inputImage.total: " << detect_inputImage.total() << std::endl;
-    std::cout << "sizeof(cv::Vec3f): " << sizeof(cv::Vec3f) << std::endl;
+    cv::Mat detect_inputImageBgr;
+    cv::cvtColor(detect_inputImageRgb, detect_inputImageBgr, cv::COLOR_RGB2BGR);
+    cv::imshow("detect_inputImageBgr", detect_inputImageBgr);
 
     // Set input tensor
-    // memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImage.data, detect_inputImage.total() * sizeof(float));
-    memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImage.data, detect_inputImage.total() * sizeof(cv::Vec3f));
+    memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImageRgb.data, detect_inputImageRgb.total() * sizeof(cv::Vec3f));
 
     std::cout << "set input tensor done." << std::endl;
     // dump input tensor
@@ -734,7 +738,7 @@ int main(int argc, char** argv) {
     }
 
     // Draw face boxes and landmarks
-    cv::Mat outputImage = drawFaceBox(bgrResizedImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
+    cv::Mat outputImage = drawFaceBox(originalBgrImage, bboxesFiltered, landmarksFiltered, scoresFiltered);
 
     // Show images
     cv::imshow("Input", originalBgrImage);

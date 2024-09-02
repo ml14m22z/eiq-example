@@ -14,6 +14,8 @@ from eye_landmark import EyeMesher
 from face_landmark import FaceMesher
 from utils import *
 import os
+from PIL import Image
+import typing
 
 MODEL_PATH = pathlib.Path("../models/")
 DETECT_MODEL = "face_detection_front_128_full_integer_quant.tflite"
@@ -59,11 +61,43 @@ def padding(image):
     print('padded_size:', padded_size)
     return padded
 
+def resize_crop_image(
+        original_image: Image.Image,
+        image_size: typing.Sequence
+) -> np.ndarray:
+    """
+    Resize and crop input image
+
+    @param original_image:  Image to resize and crop
+    @param image_size:      New image size
+    @return:                Resized and cropped image
+    """
+    # IFM size
+    ifm_width = image_size[0]
+    ifm_height = image_size[1]
+
+    # Aspect ratio resize
+    scale_ratio = (float(max(ifm_width, ifm_height))
+                   / float(min(original_image.size[0], original_image.size[1])))
+    resized_width = int(original_image.size[0] * scale_ratio)
+    resized_height = int(original_image.size[1] * scale_ratio)
+    resized_image = original_image.resize(
+        size=(resized_width, resized_height),
+        resample=Image.Resampling.BILINEAR
+    )
+
+    # Crop the center of the image
+    resized_image = resized_image.crop((
+        (resized_width - ifm_width) / 2,  # left
+        (resized_height - ifm_height) / 2,  # top
+        (resized_width + ifm_width) / 2,  # right
+        (resized_height + ifm_height) / 2  # bottom
+    ))
+
+    return np.array(resized_image, dtype=np.uint8).flatten()
+
 # detect single frame
 def main(image):
-    print('image.shape:', image.shape)
-
-    image = cv2.resize(image, (128, 128)).astype(np.uint8)
 
     print('image.shape:', image.shape)
 
@@ -185,7 +219,17 @@ if __name__ == '__main__':
     #     print("Can't read frame from source file ", args.input)
     #     sys.exit(-1)
 
-    image = cv2.imread(args.input)
+    # cv2_image = cv2.imread(args.input)
+    pil_image = Image.open(args.input).convert("RGB")
+    image = np.array(pil_image)
+
+    print('image.shape:', image.shape)
+
+    image = resize_crop_image(pil_image, [128, 128])
+    image = np.array(image).reshape(128, 128, 3)
+
+    print('image.shape:', image.shape)
+    np.savetxt('image.txt', image.flatten(), fmt='%d')
 
     # instantiate face models
     face_detector = FaceDetector(model_path = str(MODEL_PATH / DETECT_MODEL),
@@ -195,9 +239,9 @@ if __name__ == '__main__':
     eye_mesher = EyeMesher(model_path=str((MODEL_PATH / EYE_MODEL)), delegate_path = args.delegate)
 
     # endless loop
-    image_bgr = image.copy()
+    image_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    image_rgb = image.copy()
 
     # detect single
     image_show_rgb = main(image_rgb)

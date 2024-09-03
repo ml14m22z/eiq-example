@@ -53,7 +53,11 @@ find_package(OpenCV REQUIRED)
 add_executable(dms
   dms.cc
   InputFiles.cc
-  grace_hopper.cc
+  1-Normal.cc
+  2-CloseEye.cc
+  3-Yawning.cc
+  4-YawningCloseEye.cc
+  5-FaceDown.cc
 )
 
 target_include_directories(dms
@@ -91,7 +95,11 @@ dms_shm_trigger.cc
 add_executable(imshow
   imshow.cc
   InputFiles.cc
-  grace_hopper.cc
+  1-Normal.cc
+  2-CloseEye.cc
+  3-Yawning.cc
+  4-YawningCloseEye.cc
+  5-FaceDown.cc
 )
 
 target_include_directories(imshow

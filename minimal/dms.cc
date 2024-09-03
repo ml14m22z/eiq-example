@@ -607,8 +607,10 @@ int main(int argc, char** argv) {
     // Show anchors
     // std::cout << anchors << std::endl;
 
+    for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
+
     // Preprocess input data
-    cv::Mat originalRgbImage(cv::Size(GetImgWidth(0), GetImgHeight(0)), CV_8UC3, (void*)GetImgArray(0));
+    cv::Mat originalRgbImage(cv::Size(GetImgWidth(imgIndex), GetImgHeight(imgIndex)), CV_8UC3, (void*)GetImgArray(imgIndex));
     cv::Mat originalBgrImage;
     cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
 
@@ -1037,6 +1039,8 @@ int main(int argc, char** argv) {
     cv::imshow("Input", originalBgrImage);
     cv::imshow("Output", outputImageBgrCropped);
     cv::waitKey(0);
+
+    }
 
     return 0;
 }

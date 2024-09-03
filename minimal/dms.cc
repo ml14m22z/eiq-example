@@ -261,6 +261,84 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
     return make_tuple(pred_bbox, landmarks, predScores);
 }
 
+// Function to get face angle
+std::tuple<double, double, double> get_face_angle(const cv::Mat& rotation_vector, const cv::Mat& translation_vector) {
+    cv::Mat rotation_mat;
+    cv::Rodrigues(rotation_vector, rotation_mat);
+    
+    cv::Mat pose_mat;
+    cv::hconcat(rotation_mat, translation_vector, pose_mat);
+    
+    cv::Mat euler_angle;
+    cv::decomposeProjectionMatrix(pose_mat, cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
+
+    double pitch = euler_angle.at<double>(0);
+    double yaw = euler_angle.at<double>(1);
+    double roll = euler_angle.at<double>(2);
+
+    pitch = std::asin(std::sin(pitch)) * 180.0 / CV_PI;
+    roll = -std::asin(std::sin(roll)) * 180.0 / CV_PI;
+    yaw = std::asin(std::sin(yaw)) * 180.0 / CV_PI;
+
+    return {pitch, roll, yaw};
+}
+
+// Function to get height-width ratio
+double get_hw_ratio(const std::vector<cv::Point3f>& landmarks, const std::vector<int>& points) {
+    int mouth_h = cv::norm(landmarks[points[0]] - landmarks[points[1]]);
+    int mouth_w = cv::norm(landmarks[points[2]] - landmarks[points[3]]);
+    return static_cast<double>(mouth_h) / mouth_w;
+}
+
+// Function to get mouth ratio
+double get_mouth_ratio(const std::vector<cv::Point3f>& landmarks, const cv::Mat& image) {
+    std::vector<int> POINTS = {13, 14, 78, 308}; // TOP, BOTTOM, LEFT, RIGHT
+    return get_hw_ratio(landmarks, POINTS);
+}
+
+// Function to get eye ratio
+double get_eye_ratio(const std::vector<cv::Point3f>& landmarks, const cv::Mat& image, const cv::Point& offsets = cv::Point(0, 0)) {
+    std::vector<int> POINTS = {12, 4, 0, 8}; // TOP, BOTTOM, LEFT, RIGHT
+    return get_hw_ratio(landmarks, POINTS);
+}
+
+// Function to get iris ratio
+double get_iris_ratio(const std::vector<cv::Point3f>& left_landmarks, const std::vector<cv::Point3f>& right_landmarks) {
+    int left = cv::norm(left_landmarks[1] - left_landmarks[3]);
+    int right = cv::norm(right_landmarks[1] - right_landmarks[3]);
+    return static_cast<double>(left) / right;
+}
+
+// Function to get eye boxes
+std::tuple<cv::Rect, cv::Rect> get_eye_boxes(const std::vector<cv::Point3f>& landmarks, const cv::Size& size, double scale = 1.5) {
+    auto get_box = [&](const std::vector<cv::Point3f>& landmarks, const std::vector<int>& points, double scale) {
+        int x_min = size.width, y_min = size.height;
+        int x_max = 0, y_max = 0;
+        for (int i : points) {
+            const auto& landmark = landmarks[i];
+            x_min = std::min(static_cast<int>(landmark.x), x_min);
+            y_min = std::min(static_cast<int>(landmark.y), y_min);
+            x_max = std::max(static_cast<int>(landmark.x), x_max);
+            y_max = std::max(static_cast<int>(landmark.y), y_max);
+        }
+        int x_mid = (x_max + x_min) / 2;
+        int y_mid = (y_max + y_min) / 2;
+        int box_len = static_cast<int>((x_max - x_min) * scale / 2);
+        x_min = std::max(x_mid - box_len, 0);
+        x_max = std::min(x_mid + box_len, size.width);
+        y_min = std::max(y_mid - box_len, 0);
+        y_max = std::min(y_mid + box_len, size.height);
+        return cv::Rect(cv::Point(x_min, y_min), cv::Point(x_max, y_max));
+    };
+
+    std::vector<int> LEFT_EYE_POINT = {249, 263, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387, 388, 390, 398, 466};
+    std::vector<int> RIGHT_EYE_POINT = {7, 33, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246};
+
+    cv::Rect left_box = get_box(landmarks, LEFT_EYE_POINT, scale);
+    cv::Rect right_box = get_box(landmarks, RIGHT_EYE_POINT, scale);
+    return {left_box, right_box};
+}
+
 std::vector<int> nms(const std::vector<Eigen::Vector4d>& bbox, const std::vector<float>& score, float thresh = 0.4) {
     std::vector<int> keep;
     std::vector<float> areas(bbox.size());
@@ -752,6 +830,65 @@ int main(int argc, char** argv) {
     // Draw face boxes and landmarks
     cv::Mat outputImageRgb = drawFaceBox(padded_rgb, bboxesFiltered, landmarksFiltered, scoresFiltered);
     cv::Mat outputImageBgr;
+    cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
+
+    for (size_t i = 0; i < mesh_landmarks_inverse.size(); i++) {
+        const auto& mesh_landmark = mesh_landmarks_inverse[i];
+        const auto& r_vec = r_vecs[i];
+        const auto& t_vec = t_vecs[i];
+
+        double mouth_ratio = get_mouth_ratio(mesh_landmark, outputImageRgb);
+        auto [left_box, right_box] = get_eye_boxes(mesh_landmark, padded_rgb.size());
+
+        cv::Mat left_eye_img = padded_rgb(left_box);
+        cv::Mat right_eye_img = padded_rgb(right_box);
+        auto [left_eye_landmarks, left_iris_landmarks] = eye_mesher_inference(left_eye_img);
+        auto [right_eye_landmarks, right_iris_landmarks] = eye_mesher_inference(right_eye_img);
+
+        double left_eye_ratio = get_eye_ratio(left_eye_landmarks, outputImageRgb, left_box.tl());
+        double right_eye_ratio = get_eye_ratio(right_eye_landmarks, outputImageRgb, right_box.tl());
+
+        auto [pitch, roll, yaw] = get_face_angle(r_vec, t_vec);
+        double iris_ratio = get_iris_ratio(left_eye_landmarks, right_eye_landmarks);
+
+        int h = image.rows, w = image.cols;
+        int target_dim = std::max(w, h);
+        std::vector<int> padded_size = {(target_dim - h) / 2, (target_dim - h + 1) / 2,
+                                        (target_dim - w) / 2, (target_dim - w + 1) / 2};
+
+        if (mouth_ratio > 0.3) {
+            cv::putText(outputImageRgb, "Yawning: Detected", cv::Point(padded_size[2] + 70, padded_size[0] + 70),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else {
+            cv::putText(outputImageRgb, "Yawning: No", cv::Point(padded_size[2] + 70, padded_size[0] + 70),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
+        }
+
+        if (left_eye_ratio < 0.2 && right_eye_ratio < 0.2) {
+            cv::putText(outputImageRgb, "Eye: Closed", cv::Point(padded_size[2] + 70, padded_size[0] + 100),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else {
+            cv::putText(outputImageRgb, "Eye: Open", cv::Point(padded_size[2] + 70, padded_size[0] + 100),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
+        }
+
+        if (yaw > 15 && iris_ratio > 1.15) {
+            cv::putText(outputImageRgb, "Face: Left", cv::Point(padded_size[2] + 70, padded_size[0] + 130),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else if (yaw < -15 && iris_ratio < 0.85) {
+            cv::putText(outputImageRgb, "Face: Right", cv::Point(padded_size[2] + 70, padded_size[0] + 130),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else if (pitch > 30) {
+            cv::putText(outputImageRgb, "Face: UP", cv::Point(padded_size[2] + 70, padded_size[0] + 130),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else if (pitch < -13) {
+            cv::putText(outputImageRgb, "Face: Down", cv::Point(padded_size[2] + 70, padded_size[0] + 130),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        } else {
+            cv::putText(outputImageRgb, "Face: Forward", cv::Point(padded_size[2] + 70, padded_size[0] + 130),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
+        }
+    }
     cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
 
     // remove pad

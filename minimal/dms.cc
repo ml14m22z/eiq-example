@@ -609,12 +609,17 @@ int main(int argc, char** argv) {
 
     std::string rtsp1 = "rtmp://172.20.10.3:10035/live/sVNsJvqSR";
     cv::VideoCapture stream1 = cv::VideoCapture(rtsp1, cv::CAP_FFMPEG);
+    stream1.set(CV_CAP_PROP_BUFFERSIZE, 0);
 
     if (!stream1.isOpened())
     {
         std::cout << "stream not opened" << std::endl;
         return -1;
     }
+
+    cv::startWindowThread();
+    cv::namedWindow("Input");
+    cv::namedWindow("Output");
 
     // for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
     for (;;) {
@@ -1052,10 +1057,12 @@ int main(int argc, char** argv) {
     cv::cvtColor(outputImageRgbCropped, outputImageBgrCropped, cv::COLOR_RGB2BGR);
 
     // Show images
+    // cv::imshow("Input", originalBgrImage);
+    // cv::imshow("Output", outputImageBgrCropped);
+    // cv::waitKey(1);
+
     cv::imshow("Input", originalBgrImage);
     cv::imshow("Output", outputImageBgrCropped);
-    cv::waitKey(1);
-
     }
 
     return 0;

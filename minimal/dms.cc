@@ -50,6 +50,9 @@ cv::Mat dist_coeffs;
 
 const int FACE_KEY_NUM = 468;
 
+const int EYE_KEY_NUM = 71;
+const int IRIS_KEY_NUM = 5;
+
 int savetxt(const std::string& filename, const std::vector<auto>& data) {
     std::ofstream file(filename);
     if (!file.is_open()) {
@@ -840,10 +843,77 @@ int main(int argc, char** argv) {
         double mouth_ratio = get_mouth_ratio(mesh_landmark, outputImageRgb);
         auto [left_box, right_box] = get_eye_boxes(mesh_landmark, padded_rgb.size());
 
-        cv::Mat left_eye_img = padded_rgb(left_box);
-        cv::Mat right_eye_img = padded_rgb(right_box);
-        auto [left_eye_landmarks, left_iris_landmarks] = eye_mesher_inference(left_eye_img);
-        auto [right_eye_landmarks, right_iris_landmarks] = eye_mesher_inference(right_eye_img);
+        cv::Mat left_eye_img_rgb = padded_rgb(left_box);
+        cv::Mat left_eye_img_bgr;
+        cv::cvtColor(left_eye_img_rgb, left_eye_img_bgr, cv::COLOR_RGB2BGR);
+
+        cv::Mat right_eye_img_rgb = padded_rgb(right_box);
+        cv::Mat right_eye_img_bgr;
+        cv::cvtColor(right_eye_img_rgb, right_eye_img_bgr, cv::COLOR_RGB2BGR);
+
+
+        // auto [left_eye_landmarks, left_iris_landmarks] = eye_mesher_inference(left_eye_img);
+        cv::Mat left_eye_img_rgb_resized;
+        cv::resize(left_eye_img_bgr, left_eye_img_rgb_resized, cv::Size(eye_inputShape->data[2], eye_inputShape->data[1]), 0, 0, cv::INTER_LINEAR);
+
+        cv::Mat left_eye_inputImage;
+        left_eye_img_rgb_resized.convertTo(left_eye_inputImage, CV_32FC3, 1.0 / 255.0);
+        
+        // Set input tensor
+        memcpy(eye_interpreter->typed_tensor<float>(eye_inputIndex), left_eye_inputImage.data, left_eye_inputImage.total() * sizeof(cv::Vec3f));
+
+        // Run inference
+        eye_interpreter->Invoke();
+
+        // Get output tensors
+        const TfLiteTensor* left_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
+        const TfLiteTensor* left_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
+
+        cv::Mat left_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, left_eye_landmarks_data->data.f);
+        cv::Mat left_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, left_iris_landmarks_data->data.f);
+
+        for (int i = 0; i < EYE_KEY_NUM; ++i) {
+            left_eye_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            left_eye_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        }
+
+        for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+            left_iris_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            left_iris_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        }
+
+        // auto [right_eye_landmarks, right_iris_landmarks] = eye_mesher_inference(right_eye_img);
+        cv::Mat right_eye_img_rgb_resized;
+        cv::resize(right_eye_img_rgb, right_eye_img_rgb_resized, cv::Size(eye_inputShape->data[2], eye_inputShape->data[1]), 0, 0, cv::INTER_LINEAR);
+        cv::Mat right_eye_inputImage;
+        right_eye_img_rgb_resized.convertTo(right_eye_inputImage, CV_32FC3, 1.0 / 255.0);
+        
+        // Set input tensor
+        memcpy(eye_interpreter->typed_tensor<float>(eye_inputIndex), right_eye_inputImage.data, right_eye_inputImage.total() * sizeof(cv::Vec3f));
+
+        // Run inference
+        eye_interpreter->Invoke();
+
+        // Get output tensors
+        const TfLiteTensor* right_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
+        const TfLiteTensor* right_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
+
+        cv::Mat right_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, right_eye_landmarks_data->data.f);
+        cv::Mat right_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, right_iris_landmarks_data->data.f);
+
+        for (int i = 0; i < EYE_KEY_NUM; ++i) {
+            right_eye_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            right_eye_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        }
+
+        for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+            right_iris_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            right_iris_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        }
+
+        std::cout << "done." << std::endl;
+        cv::waitKey(0);
+        exit(0);
 
         double left_eye_ratio = get_eye_ratio(left_eye_landmarks, outputImageRgb, left_box.tl());
         double right_eye_ratio = get_eye_ratio(right_eye_landmarks, outputImageRgb, right_box.tl());
@@ -851,7 +921,8 @@ int main(int argc, char** argv) {
         auto [pitch, roll, yaw] = get_face_angle(r_vec, t_vec);
         double iris_ratio = get_iris_ratio(left_eye_landmarks, right_eye_landmarks);
 
-        int h = image.rows, w = image.cols;
+        int h = originalRgbImage.rows;
+        int w = originalRgbImage.cols;
         int target_dim = std::max(w, h);
         std::vector<int> padded_size = {(target_dim - h) / 2, (target_dim - h + 1) / 2,
                                         (target_dim - w) / 2, (target_dim - w + 1) / 2};

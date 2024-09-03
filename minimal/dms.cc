@@ -869,17 +869,48 @@ int main(int argc, char** argv) {
         const TfLiteTensor* left_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
         const TfLiteTensor* left_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
 
-        cv::Mat left_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, left_eye_landmarks_data->data.f);
-        cv::Mat left_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, left_iris_landmarks_data->data.f);
+        // cv::Mat left_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, left_eye_landmarks_data->data.f);
+        // cv::Mat left_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, left_iris_landmarks_data->data.f);
 
+        // for (int i = 0; i < EYE_KEY_NUM; ++i) {
+        //     left_eye_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+        //     left_eye_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        // }
+
+        // for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+        //     left_iris_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+        //     left_iris_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        // }
+
+        std::vector<cv::Point3f> left_eye_landmarks(EYE_KEY_NUM);
+        std::vector<cv::Point3f> left_iris_landmarks(IRIS_KEY_NUM);
+        
+        // Populate left_eye_landmarks
         for (int i = 0; i < EYE_KEY_NUM; ++i) {
-            left_eye_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-            left_eye_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+            left_eye_landmarks[i] = cv::Point3f(
+                left_eye_landmarks_data->data.f[i * 3],
+                left_eye_landmarks_data->data.f[i * 3 + 1],
+                left_eye_landmarks_data->data.f[i * 3 + 2]
+            );
         }
-
+        
+        // Populate left_iris_landmarks
         for (int i = 0; i < IRIS_KEY_NUM; ++i) {
-            left_iris_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-            left_iris_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+            left_iris_landmarks[i] = cv::Point3f(
+                left_iris_landmarks_data->data.f[i * 3],
+                left_iris_landmarks_data->data.f[i * 3 + 1],
+                left_iris_landmarks_data->data.f[i * 3 + 2]
+            );
+        }
+        
+        for (int i = 0; i < EYE_KEY_NUM; ++i) {
+            left_eye_landmarks[i].x *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            left_eye_landmarks[i].y *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        }
+        
+        for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+            left_iris_landmarks[i].x *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            left_iris_landmarks[i].y *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
         }
 
         // auto [right_eye_landmarks, right_iris_landmarks] = eye_mesher_inference(right_eye_img);
@@ -898,26 +929,53 @@ int main(int argc, char** argv) {
         const TfLiteTensor* right_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
         const TfLiteTensor* right_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
 
-        cv::Mat right_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, right_eye_landmarks_data->data.f);
-        cv::Mat right_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, right_iris_landmarks_data->data.f);
+        // cv::Mat right_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, right_eye_landmarks_data->data.f);
+        // cv::Mat right_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, right_iris_landmarks_data->data.f);
+
+        // for (int i = 0; i < EYE_KEY_NUM; ++i) {
+        //     right_eye_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+        //     right_eye_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        // }
+
+        // for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+        //     right_iris_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+        //     right_iris_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+        // }
+
+        std::vector<cv::Point3f> right_eye_landmarks(EYE_KEY_NUM);
+        std::vector<cv::Point3f> right_iris_landmarks(IRIS_KEY_NUM);
+
+        // Populate right_eye_landmarks
+        for (int i = 0; i < EYE_KEY_NUM; ++i) {
+            right_eye_landmarks[i] = cv::Point3f(
+                right_eye_landmarks_data->data.f[i * 3],
+                right_eye_landmarks_data->data.f[i * 3 + 1],
+                right_eye_landmarks_data->data.f[i * 3 + 2]
+            );
+        }
+
+        // Populate right_iris_landmarks
+        for (int i = 0; i < IRIS_KEY_NUM; ++i) {
+            right_iris_landmarks[i] = cv::Point3f(
+                right_iris_landmarks_data->data.f[i * 3],
+                right_iris_landmarks_data->data.f[i * 3 + 1],
+                right_iris_landmarks_data->data.f[i * 3 + 2]
+            );
+        }
 
         for (int i = 0; i < EYE_KEY_NUM; ++i) {
-            right_eye_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-            right_eye_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+            right_eye_landmarks[i].x *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            right_eye_landmarks[i].y *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
         }
 
         for (int i = 0; i < IRIS_KEY_NUM; ++i) {
-            right_iris_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-            right_iris_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
+            right_iris_landmarks[i].x *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
+            right_iris_landmarks[i].y *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
         }
 
-        std::cout << "done." << std::endl;
-        cv::waitKey(0);
-        exit(0);
 
         double left_eye_ratio = get_eye_ratio(left_eye_landmarks, outputImageRgb, left_box.tl());
         double right_eye_ratio = get_eye_ratio(right_eye_landmarks, outputImageRgb, right_box.tl());
-
         auto [pitch, roll, yaw] = get_face_angle(r_vec, t_vec);
         double iris_ratio = get_iris_ratio(left_eye_landmarks, right_eye_landmarks);
 

@@ -271,13 +271,14 @@ std::tuple<double, double, double> get_face_angle(const cv::Mat& rotation_vector
     
     cv::Mat pose_mat;
     cv::hconcat(rotation_mat, translation_vector, pose_mat);
-    
-    cv::Mat euler_angle;
-    cv::decomposeProjectionMatrix(pose_mat, cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
 
-    double pitch = euler_angle.at<double>(0);
-    double yaw = euler_angle.at<double>(1);
-    double roll = euler_angle.at<double>(2);
+    cv::Mat euler_angle;
+    cv::Mat cameraMatrix, rotMatrix, transVect, rotMatrixX, rotMatrixY, rotMatrixZ;
+    cv::decomposeProjectionMatrix(pose_mat, cameraMatrix, rotMatrix, transVect, rotMatrixX, rotMatrixY, rotMatrixZ, euler_angle);
+
+    double pitch = euler_angle.at<double>(0) * M_PI / 180.0;
+    double yaw = euler_angle.at<double>(1) * M_PI / 180.0;
+    double roll = euler_angle.at<double>(2) * M_PI / 180.0;
 
     pitch = std::asin(std::sin(pitch)) * 180.0 / CV_PI;
     roll = -std::asin(std::sin(roll)) * 180.0 / CV_PI;

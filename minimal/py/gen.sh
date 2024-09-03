@@ -1,4 +1,4 @@
-input_dir_abs=../../image_classification
+input_dir_abs=../sample/640x320
 src_out_abs=./
 hdr_out_abs=./
 img_size=128

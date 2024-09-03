@@ -112,7 +112,7 @@ cv::Mat padding(const cv::Mat& image) {
     cv::Mat padded;
     cv::copyMakeBorder(image, padded, top, bottom, left, right, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
-    std::cout << "padded_size: [" << top << ", " << bottom << ", " << left << ", " << right << "]" << std::endl;
+    // std::cout << "padded_size: [" << top << ", " << bottom << ", " << left << ", " << right << "]" << std::endl;
 
     return padded;
 }
@@ -166,52 +166,52 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
 // auto 
 std::tuple<std::vector<Eigen::Vector4d>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
-    savetxt("scores.txt", scores);
-    savetxt("bboxes.txt", bboxes);
+    // savetxt("scores.txt", scores);
+    // savetxt("bboxes.txt", bboxes);
     
     int w = inputShape.width;
     int h = inputShape.height;
 
-    std::cout << "w: " << w << std::endl;
-    std::cout << "h: " << h << std::endl;
+    // std::cout << "w: " << w << std::endl;
+    // std::cout << "h: " << h << std::endl;
 
     float topScore = *max_element(scores.begin(), scores.end());
-    std::cout << "topScore: " << topScore << std::endl;
+    // std::cout << "topScore: " << topScore << std::endl;
 
     float scoreThresh = std::max(SCORE_THRESH, topScore);
-    std::cout << "scoreThresh: " << scoreThresh << std::endl;
+    // std::cout << "scoreThresh: " << scoreThresh << std::endl;
 
     std::vector<Eigen::Vector4d> pred_bbox;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
-            std::cout << "scores[" << i << "]: " << scores[i] << std::endl;
+            // std::cout << "scores[" << i << "]: " << scores[i] << std::endl;
 
             for (int j = 0; j < 16; j++) {
-                std::cout << "bboxes[" << i << " * 16 + " << j << "]: " << bboxes[i * 16 + j] << std::endl;
+                // std::cout << "bboxes[" << i << " * 16 + " << j << "]: " << bboxes[i * 16 + j] << std::endl;
             }
 
-            std::cout << "anchors: " << anchors(i, 0) << " " << anchors(i, 1) << std::endl;
+            // std::cout << "anchors: " << anchors(i, 0) << " " << anchors(i, 1) << std::endl;
 
             float bboxes_decoded[2] = {(anchors(i, 0) + bboxes[i * 16 + 1]) / h, (anchors(i, 1) + bboxes[i * 16]) / w};
-            std::cout << "bboxes_decoded: " << bboxes_decoded[0] << " " << bboxes_decoded[1] << std::endl;
+            // std::cout << "bboxes_decoded: " << bboxes_decoded[0] << " " << bboxes_decoded[1] << std::endl;
 
             float pred_w = bboxes[i * 16 + 2] / w;
             float pred_h = bboxes[i * 16 + 3] / h;
-            std::cout << "pred_w: " << pred_w << std::endl;
-            std::cout << "pred_h: " << pred_h << std::endl;
+            // std::cout << "pred_w: " << pred_w << std::endl;
+            // std::cout << "pred_h: " << pred_h << std::endl;
 
             float topleft_x = bboxes_decoded[1] - pred_w * 0.5;
             float topleft_y = bboxes_decoded[0] - pred_h * 0.5;
             float btmright_x = bboxes_decoded[1] + pred_w * 0.5;
             float btmright_y = bboxes_decoded[0] + pred_h * 0.5;
-            std::cout << "topleft_x: " << topleft_x << std::endl;
-            std::cout << "topleft_y: " << topleft_y << std::endl;
-            std::cout << "btmright_x: " << btmright_x << std::endl;
-            std::cout << "btmright_y: " << btmright_y << std::endl;
+            // std::cout << "topleft_x: " << topleft_x << std::endl;
+            // std::cout << "topleft_y: " << topleft_y << std::endl;
+            // std::cout << "btmright_x: " << btmright_x << std::endl;
+            // std::cout << "btmright_y: " << btmright_y << std::endl;
             pred_bbox.push_back(Eigen::Vector4d(topleft_x, topleft_y, btmright_x, btmright_y));
-            std::cout << "pred_bbox: " << pred_bbox.back() << std::endl;
+            // std::cout << "pred_bbox: " << pred_bbox.back() << std::endl;
 
             // cv::Rect bbox;
             // bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
@@ -240,7 +240,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 landmark.push_back(point);
             }
 
-            std::cout << "landmark: " << landmark << std::endl;
+            // std::cout << "landmark: " << landmark << std::endl;
 
             for (int j = 0; j < 6; j++) {
                 landmark[j].x += anchors(i, 1);
@@ -254,7 +254,7 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 landmark[j].y /= w;
             }
 
-            std::cout << "landmark: " << landmark << std::endl;
+            // std::cout << "landmark: " << landmark << std::endl;
 
             landmarks.push_back(landmark);
 
@@ -607,12 +607,28 @@ int main(int argc, char** argv) {
     // Show anchors
     // std::cout << anchors << std::endl;
 
-    for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
+    std::string rtsp1 = "rtmp://172.20.10.3:10035/live/sVNsJvqSR";
+    cv::VideoCapture stream1 = cv::VideoCapture(rtsp1, cv::CAP_FFMPEG);
+
+    if (!stream1.isOpened())
+    {
+        std::cout << "stream not opened" << std::endl;
+        return -1;
+    }
+
+    // for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
+    for (;;) {
 
     // Preprocess input data
-    cv::Mat originalRgbImage(cv::Size(GetImgWidth(imgIndex), GetImgHeight(imgIndex)), CV_8UC3, (void*)GetImgArray(imgIndex));
+    // cv::Mat originalRgbImage(cv::Size(GetImgWidth(imgIndex), GetImgHeight(imgIndex)), CV_8UC3, (void*)GetImgArray(imgIndex));
     cv::Mat originalBgrImage;
-    cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
+    if (!stream1.read(originalBgrImage))
+    {
+        std::cout << "stream not read" << std::endl;
+        continue;
+    }
+    cv::Mat originalRgbImage;
+    cv::cvtColor(originalBgrImage, originalRgbImage, cv::COLOR_BGR2RGB);
 
     cv::Mat padded_rgb = padding(originalRgbImage);
     cv::Mat padded_bgr;
@@ -652,7 +668,7 @@ int main(int argc, char** argv) {
     std::vector<float> scores(detect_outputClassificators->data.f, detect_outputClassificators->data.f + detect_outputClassificators->bytes / sizeof(float));
     std::vector<float> bboxes(detect_outputRegressors->data.f, detect_outputRegressors->data.f + detect_outputRegressors->bytes / sizeof(float));
 
-    std::cout << "scores.size: " << scores.size() << std::endl;
+    // std::cout << "scores.size: " << scores.size() << std::endl;
     // std::cout << "scores: " << std::endl;
     // for (int i = 0; i < 10; i++) {
     //     std::cout << scores[i] << " ";
@@ -664,7 +680,7 @@ int main(int argc, char** argv) {
         scores[i] = 1 / (1 + exp(-scores[i]));
     }
 
-    std::cout << "bboxes.size: " << bboxes.size() << std::endl;
+    // std::cout << "bboxes.size: " << bboxes.size() << std::endl;
     // std::cout << "bboxes: " << std::endl;
     // for (int i = 0; i < 10; i++) {
     //     std::cout << bboxes[i] << " ";
@@ -690,36 +706,36 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
-    std::cout << "bboxesDecoded: ";
-    for (int i = 0; i < bboxesDecoded.size(); i++) {
-        std::cout << bboxesDecoded[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
+    // std::cout << "bboxesDecoded: ";
+    // for (int i = 0; i < bboxesDecoded.size(); i++) {
+    //     std::cout << bboxesDecoded[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-    std::cout << "landmarks.size: " << landmarks.size() << std::endl;
-    std::cout << "landmarks: ";
-    for (int i = 0; i < landmarks.size(); i++) {
-        std::cout << landmarks[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "landmarks.size: " << landmarks.size() << std::endl;
+    // std::cout << "landmarks: ";
+    // for (int i = 0; i < landmarks.size(); i++) {
+    //     std::cout << landmarks[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-    std::cout << "predScores.size: " << predScores.size() << std::endl;
-    std::cout << "predScores: ";
-    for (int i = 0; i < predScores.size(); i++) {
-        std::cout << predScores[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "predScores.size: " << predScores.size() << std::endl;
+    // std::cout << "predScores: ";
+    // for (int i = 0; i < predScores.size(); i++) {
+    //     std::cout << predScores[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     // Apply NMS
     std::vector<int> keepMask = nms(bboxesDecoded, predScores);
 
-    std::cout << "keepMask.size: " << keepMask.size() << std::endl;
-    std::cout << "keepMask: ";
-    for (int i = 0; i < keepMask.size(); i++) {
-        std::cout << keepMask[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "keepMask.size: " << keepMask.size() << std::endl;
+    // std::cout << "keepMask: ";
+    // for (int i = 0; i < keepMask.size(); i++) {
+    //     std::cout << keepMask[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     std::vector<Eigen::Vector4d> bboxesFiltered;
     std::vector<std::vector<cv::Point2f>> landmarksFiltered;
@@ -730,26 +746,26 @@ int main(int argc, char** argv) {
         scoresFiltered.push_back(predScores[keepMask[i]]);
     }
 
-    std::cout << "bboxesFiltered.size: " << bboxesFiltered.size() << std::endl;
-    std::cout << "bboxesFiltered: ";
-    for (int i = 0; i < bboxesFiltered.size(); i++) {
-        std::cout << bboxesFiltered[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "bboxesFiltered.size: " << bboxesFiltered.size() << std::endl;
+    // std::cout << "bboxesFiltered: ";
+    // for (int i = 0; i < bboxesFiltered.size(); i++) {
+    //     std::cout << bboxesFiltered[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-    std::cout << "landmarksFiltered.size: " << landmarksFiltered.size() << std::endl;
-    std::cout << "landmarksFiltered: ";
-    for (int i = 0; i < landmarksFiltered.size(); i++) {
-        std::cout << landmarksFiltered[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "landmarksFiltered.size: " << landmarksFiltered.size() << std::endl;
+    // std::cout << "landmarksFiltered: ";
+    // for (int i = 0; i < landmarksFiltered.size(); i++) {
+    //     std::cout << landmarksFiltered[i] << " ";
+    // }
+    // std::cout << std::endl;
 
-    std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
-    std::cout << "scoresFiltered: ";
-    for (int i = 0; i < scoresFiltered.size(); i++) {
-        std::cout << scoresFiltered[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
+    // std::cout << "scoresFiltered: ";
+    // for (int i = 0; i < scoresFiltered.size(); i++) {
+    //     std::cout << scoresFiltered[i] << " ";
+    // }
+    // std::cout << std::endl;
 
     const cv::Size& size = padded_rgb.size();
     // Initialize focal length and camera center
@@ -768,21 +784,21 @@ int main(int argc, char** argv) {
     std::vector<cv::Mat> t_vecs;
 
     // Loop through the bounding boxes and landmarks
-    std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
+    // std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
     for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
         const auto& bbox = bboxesDecoded[i];
         std::vector<cv::Point2f> landmark = landmarks[i];
-        std::cout << "Bbox: " << bbox << std::endl;
-        std::cout << "Landmark: " << landmark << std::endl;
+        // std::cout << "Bbox: " << bbox << std::endl;
+        // std::cout << "Landmark: " << landmark << std::endl;
 
         // Align the face
         cv::Mat aligned_face, M;
         float angle;
         std::tie(aligned_face, M, angle) = detect_align(padded_rgb, landmark);
         // std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
-        std::cout << "Aligned face: " << std::endl;
-        dump(aligned_face);
-        std::cout << "M: " << M << ", Angle: " << angle << std::endl;
+        // std::cout << "Aligned face: " << std::endl;
+        // dump(aligned_face);
+        // std::cout << "M: " << M << ", Angle: " << angle << std::endl;
 
         // Perform mesh inference
         // std::vector<cv::Point3f> mesh_landmark;
@@ -1038,7 +1054,7 @@ int main(int argc, char** argv) {
     // Show images
     cv::imshow("Input", originalBgrImage);
     cv::imshow("Output", outputImageBgrCropped);
-    cv::waitKey(0);
+    cv::waitKey(1);
 
     }
 

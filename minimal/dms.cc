@@ -347,7 +347,7 @@ cv::Mat resizeCropImage(const cv::Mat& originalImage, const cv::Size& imageSize)
 }
 
 cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<Eigen::Vector4d>& bboxes, const std::vector<std::vector<cv::Point2f>>& landmarks, const std::vector<float>& scores) {
-    cv::Mat result = image.clone();
+    cv::Mat result = image;
     for (int i = 0; i < bboxes.size(); i++) {
         cv::Rect bbox(bboxes[i][0], bboxes[i][1], bboxes[i][2] - bboxes[i][0], bboxes[i][3] - bboxes[i][1]);
         cv::rectangle(result, bbox, cv::Scalar(255, 0, 0), 2);
@@ -552,19 +552,11 @@ int main(int argc, char** argv) {
     cv::cvtColor(originalBgrImage, originalRgbImage, cv::COLOR_BGR2RGB);
 
     cv::Mat padded_rgb = padding(originalRgbImage);
-    cv::Mat padded_bgr;
-    cv::cvtColor(padded_rgb, padded_bgr, cv::COLOR_RGB2BGR);
 
     cv::Mat rgbResizedImage = resizeCropImage(padded_rgb, cv::Size(detect_inputShape->data[2], detect_inputShape->data[1]));
 
-    cv::Mat bgrResizedImage;
-    cv::cvtColor(rgbResizedImage, bgrResizedImage, cv::COLOR_RGB2BGR);
-
     cv::Mat detect_inputImageRgb;
     rgbResizedImage.convertTo(detect_inputImageRgb, CV_32FC3, 1.0 / 128.0, -1.0);
-
-    cv::Mat detect_inputImageBgr;
-    cv::cvtColor(detect_inputImageRgb, detect_inputImageBgr, cv::COLOR_RGB2BGR);
 
     // Set input tensor
     memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImageRgb.data, detect_inputImageRgb.total() * sizeof(cv::Vec3f));
@@ -698,8 +690,6 @@ int main(int argc, char** argv) {
 
     // Draw face boxes and landmarks
     cv::Mat outputImageRgb = drawFaceBox(padded_rgb, bboxesFiltered, landmarksFiltered, scoresFiltered);
-    cv::Mat outputImageBgr;
-    cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
 
     for (size_t i = 0; i < mesh_landmarks_inverse.size(); i++) {
         const auto& mesh_landmark = mesh_landmarks_inverse[i];
@@ -710,17 +700,11 @@ int main(int argc, char** argv) {
         auto [left_box, right_box] = get_eye_boxes(mesh_landmark, padded_rgb.size());
 
         cv::Mat left_eye_img_rgb = padded_rgb(left_box);
-        cv::Mat left_eye_img_bgr;
-        cv::cvtColor(left_eye_img_rgb, left_eye_img_bgr, cv::COLOR_RGB2BGR);
-
         cv::Mat right_eye_img_rgb = padded_rgb(right_box);
-        cv::Mat right_eye_img_bgr;
-        cv::cvtColor(right_eye_img_rgb, right_eye_img_bgr, cv::COLOR_RGB2BGR);
-
 
         // auto [left_eye_landmarks, left_iris_landmarks] = eye_mesher_inference(left_eye_img);
         cv::Mat left_eye_img_rgb_resized;
-        cv::resize(left_eye_img_bgr, left_eye_img_rgb_resized, cv::Size(eye_inputShape->data[2], eye_inputShape->data[1]), 0, 0, cv::INTER_LINEAR);
+        cv::resize(left_eye_img_rgb, left_eye_img_rgb_resized, cv::Size(eye_inputShape->data[2], eye_inputShape->data[1]), 0, 0, cv::INTER_LINEAR);
 
         cv::Mat left_eye_inputImage;
         left_eye_img_rgb_resized.convertTo(left_eye_inputImage, CV_32FC3, 1.0 / 255.0);
@@ -858,7 +842,6 @@ int main(int argc, char** argv) {
                         cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
         }
     }
-    cv::cvtColor(outputImageRgb, outputImageBgr, cv::COLOR_RGB2BGR);
 
     // remove pad
     int h = originalBgrImage.rows;

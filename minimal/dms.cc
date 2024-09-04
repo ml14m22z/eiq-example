@@ -14,6 +14,7 @@
 #include <tensorflow/lite/kernels/register.h>
 #include <tensorflow/lite/optional_debug_tools.h>
 #include "InputFiles.hpp"
+#include <thread>
 
 // using namespace std;
 // using namespace cv;
@@ -424,6 +425,7 @@ std::tuple<cv::Mat, cv::Mat> decode_pose(std::vector<cv::Point2f>& landmarks) {
     return std::make_tuple(rotation_vector, translation_vector);
 }
 
+cv::Mat originalBgrImage;
 
 int main(int argc, char** argv) {
 
@@ -518,17 +520,34 @@ int main(int argc, char** argv) {
     cv::namedWindow("Input");
     cv::namedWindow("Output");
 
+    // skip the first frame 
+    stream1.read(originalBgrImage);
+    // Fork a new thread to display the input stream
+    std::thread displayThread([&stream1]() {
+        while (true) {
+            try {
+                stream1.read(originalBgrImage);
+                std::string fps = std::to_string(stream1.get(cv::CAP_PROP_FPS));
+                cv::putText(originalBgrImage, fps, cv::Point(20, 20),
+                            cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
+                cv::imshow("Input", originalBgrImage);
+            } catch (cv::Exception& e) {
+                std::cerr << "Exception occurred: " << e.what() << std::endl;
+            }
+        }
+    });
+
     // for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
     for (;;) {
 
     // Preprocess input data
     // cv::Mat originalRgbImage(cv::Size(GetImgWidth(imgIndex), GetImgHeight(imgIndex)), CV_8UC3, (void*)GetImgArray(imgIndex));
-    cv::Mat originalBgrImage;
-    if (!stream1.read(originalBgrImage))
-    {
-        std::cout << "stream not read" << std::endl;
-        continue;
-    }
+    // cv::Mat originalBgrImage;
+    // if (!stream1.read(originalBgrImage))
+    // {
+    //     std::cout << "stream not read" << std::endl;
+    //     continue;
+    // }
     cv::Mat originalRgbImage;
     cv::cvtColor(originalBgrImage, originalRgbImage, cv::COLOR_BGR2RGB);
 
@@ -858,9 +877,11 @@ int main(int argc, char** argv) {
     // cv::imshow("Output", outputImageBgrCropped);
     // cv::waitKey(1);
 
-    cv::imshow("Input", originalBgrImage);
+    // cv::imshow("Input", originalBgrImage);
     cv::imshow("Output", outputImageBgrCropped);
     }
 
+    // Wait for the display thread to finish
+    displayThread.join();
     return 0;
 }

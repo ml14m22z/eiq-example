@@ -166,70 +166,27 @@ Eigen::MatrixXf createAnchors(const cv::Size& inputShape) {
 // auto 
 std::tuple<std::vector<Eigen::Vector4d>, std::vector<std::vector<cv::Point2f>>, std::vector<float>>
 decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const cv::Size& inputShape, const Eigen::MatrixXf& anchors) {
-    // savetxt("scores.txt", scores);
-    // savetxt("bboxes.txt", bboxes);
-    
     int w = inputShape.width;
     int h = inputShape.height;
 
-    // std::cout << "w: " << w << std::endl;
-    // std::cout << "h: " << h << std::endl;
-
     float topScore = *max_element(scores.begin(), scores.end());
-    // std::cout << "topScore: " << topScore << std::endl;
-
     float scoreThresh = std::max(SCORE_THRESH, topScore);
-    // std::cout << "scoreThresh: " << scoreThresh << std::endl;
 
     std::vector<Eigen::Vector4d> pred_bbox;
     std::vector<std::vector<cv::Point2f>> landmarks;
     std::vector<float> predScores;
     for (int i = 0; i < scores.size(); i++) {
         if (scores[i] >= scoreThresh) {
-            // std::cout << "scores[" << i << "]: " << scores[i] << std::endl;
-
-            for (int j = 0; j < 16; j++) {
-                // std::cout << "bboxes[" << i << " * 16 + " << j << "]: " << bboxes[i * 16 + j] << std::endl;
-            }
-
-            // std::cout << "anchors: " << anchors(i, 0) << " " << anchors(i, 1) << std::endl;
-
             float bboxes_decoded[2] = {(anchors(i, 0) + bboxes[i * 16 + 1]) / h, (anchors(i, 1) + bboxes[i * 16]) / w};
-            // std::cout << "bboxes_decoded: " << bboxes_decoded[0] << " " << bboxes_decoded[1] << std::endl;
 
             float pred_w = bboxes[i * 16 + 2] / w;
             float pred_h = bboxes[i * 16 + 3] / h;
-            // std::cout << "pred_w: " << pred_w << std::endl;
-            // std::cout << "pred_h: " << pred_h << std::endl;
 
             float topleft_x = bboxes_decoded[1] - pred_w * 0.5;
             float topleft_y = bboxes_decoded[0] - pred_h * 0.5;
             float btmright_x = bboxes_decoded[1] + pred_w * 0.5;
             float btmright_y = bboxes_decoded[0] + pred_h * 0.5;
-            // std::cout << "topleft_x: " << topleft_x << std::endl;
-            // std::cout << "topleft_y: " << topleft_y << std::endl;
-            // std::cout << "btmright_x: " << btmright_x << std::endl;
-            // std::cout << "btmright_y: " << btmright_y << std::endl;
             pred_bbox.push_back(Eigen::Vector4d(topleft_x, topleft_y, btmright_x, btmright_y));
-            // std::cout << "pred_bbox: " << pred_bbox.back() << std::endl;
-
-            // cv::Rect bbox;
-            // bbox.x = anchors(i, 0) + bboxes[i * 4 + 1] * h;
-            // bbox.y = anchors(i, 1) + bboxes[i * 4] * w;
-            // bbox.width = (anchors(i, 0) + bboxes[i * 4 + 3] * h) - bbox.x;
-            // bbox.height = (anchors(i, 1) + bboxes[i * 4 + 2] * w) - bbox.y;
-            // predBbox.push_back(bbox);
-            // std::cout << "bbox: " << bbox << std::endl;
-
-            // std::vector<cv::Point2f> landmark;
-            // for (int j = 0; j < 5; j++) {
-                // cv::Point2f point;
-                // point.x = anchors(i, 0) + bboxes[i * 10 + j * 2 + 5] * h;
-                // point.y = anchors(i, 1) + bboxes[i * 10 + j * 2 + 4] * w;
-                // landmark.push_back(point);
-                // std::cout << "landmark[" << j << "]: " << point << std::endl;
-            // }
-            // landmarks.push_back(landmark);
 
             std::vector<cv::Point2f> landmark;
 
@@ -240,24 +197,17 @@ decode(const std::vector<float>& scores, const std::vector<float>& bboxes, const
                 landmark.push_back(point);
             }
 
-            // std::cout << "landmark: " << landmark << std::endl;
-
             for (int j = 0; j < 6; j++) {
                 landmark[j].x += anchors(i, 1);
                 landmark[j].y += anchors(i, 0);
             }
-
-            // std::cout << "landmark: " << landmark << std::endl;
 
             for (int j = 0; j < 6; j++) {
                 landmark[j].x /= h;
                 landmark[j].y /= w;
             }
 
-            // std::cout << "landmark: " << landmark << std::endl;
-
             landmarks.push_back(landmark);
-
             predScores.push_back(scores[i]);
         }
     }
@@ -400,10 +350,6 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<Eigen::Vector4d>& bb
     for (int i = 0; i < bboxes.size(); i++) {
         cv::Rect bbox(bboxes[i][0], bboxes[i][1], bboxes[i][2] - bboxes[i][0], bboxes[i][3] - bboxes[i][1]);
         cv::rectangle(result, bbox, cv::Scalar(255, 0, 0), 2);
-        // for (int j = 0; j < landmarks[i].size(); j++) {
-        //     cv::circle(result, landmarks[i][j], 2, cv::Scalar(0, 255, 0), 2);
-        //     cv::putText(result, std::to_string(j), landmarks[i][j] + cv::Point2f(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
-        // }
         std::string scoreLabel = std::to_string(scores[i]);
         if (scoreLabel.length() > 4) {
             scoreLabel = scoreLabel.substr(0, 4);
@@ -416,84 +362,35 @@ cv::Mat drawFaceBox(const cv::Mat& image, const std::vector<Eigen::Vector4d>& bb
     return result;
 }
 
-int dumpData(const float* data) {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 3; k++) {
-                std::cout << data[i * 3 * 128 + j * 3 + k] << " ";
-            }
-        }
-        std::cout << std::endl;
-    }
-    return 0;
-}
-
-int dump(cv::Mat img) {
-    std::cout << "img.size: " << img.size() << std::endl;
-    std::cout << "img.channels: " << img.channels() << std::endl;
-    std::cout << "img.depth: " << img.depth() << std::endl;
-    std::cout << "img.type: " << cv::typeToString(img.type()) << std::endl;
-    std::cout << "img: " << std::endl;
-    for (int r = 0; r < 3; r++) {
-        for (int c = 0; c < 3; c++) {
-            if (img.type() == CV_32FC3) {
-                cv::Vec3f pixel = img.at<cv::Vec3f>(r, c);
-                std::cout << pixel << " ";
-            } else if (img.type() == CV_8UC3) {
-                cv::Vec3b pixel = img.at<cv::Vec3b>(r, c);
-                std::cout << pixel << " ";
-            }
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-    
-    return 0;
-}
-
 std::tuple<cv::Mat, cv::Mat, float> detect_align(const cv::Mat& image, const std::vector<cv::Point2f>& landmarks) {
     // get left and right eye
     cv::Point left_eye = landmarks[1];
     cv::Point right_eye = landmarks[0];
-    // std::cout << "left_eye: " << left_eye << std::endl;
-    // std::cout << "right_eye: " << right_eye << std::endl;
 
     // compute angle
     float dY = right_eye.y - left_eye.y;
     float dX = right_eye.x - left_eye.x;
     float angle = std::atan2(dY, dX) * 180.0 / CV_PI - 180.0;
-    // std::cout << "dY: " << dY << std::endl;
-    // std::cout << "dX: " << dX << std::endl;
-    // std::cout << "angle: " << angle << std::endl;
 
     // compute the location of right/left eye in new image
     float right_eye_pos = 1.0 - left_eye_pos[0];
-    // std::cout << "right_eye_pos: " << right_eye_pos << std::endl;
 
     // get the scale based on the distance
     float dist = std::sqrt(dY * dY + dX * dX);
     float desired_dist = (right_eye_pos - left_eye_pos[0]) * target_width;
     float scale = desired_dist / (dist + 1e-6);
-    // std::cout << "dist: " << dist << std::endl;
-    // std::cout << "desired_dist: " << desired_dist << std::endl;
-    // std::cout << "scale: " << scale << std::endl;
 
     // get the center of eyes
     cv::Point2f eye_center((left_eye.x + right_eye.x) * 0.5, (left_eye.y + right_eye.y) * 0.5);
-    // std::cout << "eye_center: " << eye_center << std::endl;
 
     // get transformation matrix
     cv::Mat M = cv::getRotationMatrix2D(eye_center, angle, scale);
-    // std::cout << "M: " << M << std::endl;
 
     // align the center
     float tX = target_width * 0.5;
     float tY = target_height * left_eye_pos[1];
     M.at<double>(0, 2) += (tX - eye_center.x);
     M.at<double>(1, 2) += (tY - eye_center.y);  // update translation vector
-    // std::cout << "tX: " << tX << std::endl;
-    // std::cout << "tY: " << tY << std::endl;
-    // std::cout << "M: " << M << std::endl;
 
     // apply affine transformation
     cv::Mat output;
@@ -653,14 +550,9 @@ int main(int argc, char** argv) {
     // Set input tensor
     memcpy(detect_interpreter->typed_tensor<float>(detect_inputIndex), detect_inputImageRgb.data, detect_inputImageRgb.total() * sizeof(cv::Vec3f));
 
-    // dump input tensor
-    // std::cout << "input tensor: " << std::endl;
-    // dumpData(detect_interpreter->typed_tensor<float>(detect_inputIndex));
-
     float* tensor_data = detect_interpreter->typed_tensor<float>(detect_inputIndex);
     int tensor_size = detect_interpreter->tensor(detect_inputIndex)->bytes / sizeof(float);
     std::vector<float> tensor_vector(tensor_data, tensor_data + tensor_size);
-    // savetxt("input.txt", tensor_vector);
 
     // Run inference
     detect_interpreter->Invoke();
@@ -673,24 +565,10 @@ int main(int argc, char** argv) {
     std::vector<float> scores(detect_outputClassificators->data.f, detect_outputClassificators->data.f + detect_outputClassificators->bytes / sizeof(float));
     std::vector<float> bboxes(detect_outputRegressors->data.f, detect_outputRegressors->data.f + detect_outputRegressors->bytes / sizeof(float));
 
-    // std::cout << "scores.size: " << scores.size() << std::endl;
-    // std::cout << "scores: " << std::endl;
-    // for (int i = 0; i < 10; i++) {
-    //     std::cout << scores[i] << " ";
-    // }
-    // std::cout << std::endl;
-
     // softmax: scores = 1 / (1 + np.exp(-scores))
     for (int i = 0; i < scores.size(); i++) {
         scores[i] = 1 / (1 + exp(-scores[i]));
     }
-
-    // std::cout << "bboxes.size: " << bboxes.size() << std::endl;
-    // std::cout << "bboxes: " << std::endl;
-    // for (int i = 0; i < 10; i++) {
-    //     std::cout << bboxes[i] << " ";
-    // }
-    // std::cout << std::endl;
 
     std::vector<Eigen::Vector4d> bboxesDecoded;
     std::vector<std::vector<cv::Point2f>> landmarks;
@@ -711,36 +589,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    // std::cout << "bboxesDecoded.size: " << bboxesDecoded.size() << std::endl;
-    // std::cout << "bboxesDecoded: ";
-    // for (int i = 0; i < bboxesDecoded.size(); i++) {
-    //     std::cout << bboxesDecoded[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "landmarks.size: " << landmarks.size() << std::endl;
-    // std::cout << "landmarks: ";
-    // for (int i = 0; i < landmarks.size(); i++) {
-    //     std::cout << landmarks[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "predScores.size: " << predScores.size() << std::endl;
-    // std::cout << "predScores: ";
-    // for (int i = 0; i < predScores.size(); i++) {
-    //     std::cout << predScores[i] << " ";
-    // }
-    // std::cout << std::endl;
-
     // Apply NMS
     std::vector<int> keepMask = nms(bboxesDecoded, predScores);
-
-    // std::cout << "keepMask.size: " << keepMask.size() << std::endl;
-    // std::cout << "keepMask: ";
-    // for (int i = 0; i < keepMask.size(); i++) {
-    //     std::cout << keepMask[i] << " ";
-    // }
-    // std::cout << std::endl;
 
     std::vector<Eigen::Vector4d> bboxesFiltered;
     std::vector<std::vector<cv::Point2f>> landmarksFiltered;
@@ -750,27 +600,6 @@ int main(int argc, char** argv) {
         landmarksFiltered.push_back(landmarks[keepMask[i]]);
         scoresFiltered.push_back(predScores[keepMask[i]]);
     }
-
-    // std::cout << "bboxesFiltered.size: " << bboxesFiltered.size() << std::endl;
-    // std::cout << "bboxesFiltered: ";
-    // for (int i = 0; i < bboxesFiltered.size(); i++) {
-    //     std::cout << bboxesFiltered[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "landmarksFiltered.size: " << landmarksFiltered.size() << std::endl;
-    // std::cout << "landmarksFiltered: ";
-    // for (int i = 0; i < landmarksFiltered.size(); i++) {
-    //     std::cout << landmarksFiltered[i] << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "scoresFiltered.size: " << scoresFiltered.size() << std::endl;
-    // std::cout << "scoresFiltered: ";
-    // for (int i = 0; i < scoresFiltered.size(); i++) {
-    //     std::cout << scoresFiltered[i] << " ";
-    // }
-    // std::cout << std::endl;
 
     const cv::Size& size = padded_rgb.size();
     // Initialize focal length and camera center
@@ -793,17 +622,11 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < bboxesDecoded.size(); ++i) {
         const auto& bbox = bboxesDecoded[i];
         std::vector<cv::Point2f> landmark = landmarks[i];
-        // std::cout << "Bbox: " << bbox << std::endl;
-        // std::cout << "Landmark: " << landmark << std::endl;
 
         // Align the face
         cv::Mat aligned_face, M;
         float angle;
         std::tie(aligned_face, M, angle) = detect_align(padded_rgb, landmark);
-        // std::cout << "Aligned face: " << aligned_face << ", M: " << M << ", Angle: " << angle << std::endl;
-        // std::cout << "Aligned face: " << std::endl;
-        // dump(aligned_face);
-        // std::cout << "M: " << M << ", Angle: " << angle << std::endl;
 
         // Perform mesh inference
         // std::vector<cv::Point3f> mesh_landmark;
@@ -893,19 +716,6 @@ int main(int argc, char** argv) {
         const TfLiteTensor* left_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
         const TfLiteTensor* left_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
 
-        // cv::Mat left_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, left_eye_landmarks_data->data.f);
-        // cv::Mat left_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, left_iris_landmarks_data->data.f);
-
-        // for (int i = 0; i < EYE_KEY_NUM; ++i) {
-        //     left_eye_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-        //     left_eye_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
-        // }
-
-        // for (int i = 0; i < IRIS_KEY_NUM; ++i) {
-        //     left_iris_landmarks.at<float>(i, 0) *= left_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-        //     left_iris_landmarks.at<float>(i, 1) *= left_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
-        // }
-
         std::vector<cv::Point3f> left_eye_landmarks(EYE_KEY_NUM);
         std::vector<cv::Point3f> left_iris_landmarks(IRIS_KEY_NUM);
         
@@ -952,19 +762,6 @@ int main(int argc, char** argv) {
         // Get output tensors
         const TfLiteTensor* right_eye_landmarks_data = eye_interpreter->tensor(eye_outputEyeIndex);
         const TfLiteTensor* right_iris_landmarks_data = eye_interpreter->tensor(eye_outputIrisIndex);
-
-        // cv::Mat right_eye_landmarks(EYE_KEY_NUM, 3, CV_32F, right_eye_landmarks_data->data.f);
-        // cv::Mat right_iris_landmarks(IRIS_KEY_NUM, 3, CV_32F, right_iris_landmarks_data->data.f);
-
-        // for (int i = 0; i < EYE_KEY_NUM; ++i) {
-        //     right_eye_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-        //     right_eye_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
-        // }
-
-        // for (int i = 0; i < IRIS_KEY_NUM; ++i) {
-        //     right_iris_landmarks.at<float>(i, 0) *= right_eye_img_rgb.cols / static_cast<float>(eye_inputShape->data[2]);
-        //     right_iris_landmarks.at<float>(i, 1) *= right_eye_img_rgb.rows / static_cast<float>(eye_inputShape->data[1]);
-        // }
 
         std::vector<cv::Point3f> right_eye_landmarks(EYE_KEY_NUM);
         std::vector<cv::Point3f> right_iris_landmarks(IRIS_KEY_NUM);

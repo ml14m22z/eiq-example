@@ -248,11 +248,14 @@ def main(args):
         array_name = "im" + str(image_idx)
         image_array_names.append(array_name)
 
-        # rgb_data = resize_crop_image(original_image, args.image_size)
-        rgb_data = flatten_image(original_image)
-        print(f"++ focing image {filename} size to original size: {original_image.size}")
-        args.image_size = original_image.size
-        width, height = original_image.size
+        if args.image_size is not None:
+            print(f"++ resizing image {filename} to {args.image_size}")
+            rgb_data = resize_crop_image(original_image, args.image_size)
+            width, height = args.image_size
+        else:
+            rgb_data = flatten_image(original_image)
+            print(f"++ focing image {filename} size to original size: {original_image.size}")
+            width, height = original_image.size
 
         if args.float:
             rgb_data = rgb_data.astype(np.float32) / 255.0
@@ -268,7 +271,7 @@ def main(args):
     header_filepath = Path(args.header_folder_path) / "InputFiles.hpp"
     common_cc_filepath = Path(args.source_folder_path) / "InputFiles.cc"
 
-    images_params = ImagesParams(image_idx, args.image_size, image_array_names, image_filenames)
+    images_params = ImagesParams(image_idx, (width, height), image_array_names, image_filenames)
 
     if len(image_filenames) > 0:
         write_hpp_file(images_params, header_filepath, common_cc_filepath, args.license_template)

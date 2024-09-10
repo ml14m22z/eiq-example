@@ -506,7 +506,7 @@ int main(int argc, char** argv) {
     // Show anchors
     // std::cout << anchors << std::endl;
 
-    std::string rtsp1 = "rtmp://172.20.10.3:10035/live/sVNsJvqSR";
+    std::string rtsp1 = "rtmp://172.20.10.3:10035/live/mI9w40eSg";
     cv::VideoCapture stream1 = cv::VideoCapture(rtsp1, cv::CAP_FFMPEG);
     stream1.set(CV_CAP_PROP_BUFFERSIZE, 0);
 
@@ -817,7 +817,10 @@ int main(int argc, char** argv) {
                         cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0), 2);
         }
 
-        if (left_eye_ratio < 0.2 && right_eye_ratio < 0.2) {
+        // std::string eye_ratio_str = "left_eye_ratio: " + std::to_string(left_eye_ratio) + " right_eye_ratio: " + std::to_string(right_eye_ratio);
+        // cv::putText(outputImageRgb, eye_ratio_str, cv::Point(padded_size[2] + 70, padded_size[0] + 40),
+        //                 cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
+        if (left_eye_ratio < 0.3 && right_eye_ratio < 0.3) {
             cv::putText(outputImageRgb, "Eye: Closed", cv::Point(padded_size[2] + 70, padded_size[0] + 100),
                         cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 0, 0), 2);
         } else {

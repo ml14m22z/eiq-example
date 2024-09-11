@@ -436,12 +436,12 @@ int main(int argc, char** argv) {
         return -1;
     }
     std::unique_ptr<tflite::FlatBufferModel> landmark_model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + LANDMARK_MODEL).c_str());
-    if (!detect_model) {
+    if (!landmark_model) {
         std::cerr << "Failed to load model: " << LANDMARK_MODEL << std::endl;
         return -1;
     }
     std::unique_ptr<tflite::FlatBufferModel> eye_model = tflite::FlatBufferModel::BuildFromFile((MODEL_PATH + EYE_MODEL).c_str());
-    if (!detect_model) {
+    if (!eye_model) {
         std::cerr << "Failed to load model: " << EYE_MODEL << std::endl;
         return -1;
     }

@@ -14,11 +14,15 @@
 #include <tensorflow/lite/kernels/register.h>
 #include <tensorflow/lite/optional_debug_tools.h>
 #include "InputFiles.hpp"
+#include <cinttypes>
+#include "SHA256.h"
 #include <thread>
 
 // using namespace std;
 // using namespace cv;
 // using namespace tflite;
+
+#define info(...) printf(__VA_ARGS__)
 
 const std::string MODEL_PATH = "../../models/";
 const std::string DETECT_MODEL = "face_detection_front_128_full_integer_quant.tflite";
@@ -548,7 +552,22 @@ int main(int argc, char** argv) {
     for (int imgIndex = 0; imgIndex < NUMBER_OF_FILES; imgIndex++) {
 
     // Preprocess input data
-    cv::Mat originalRgbImage(cv::Size(GetImgWidth(imgIndex), GetImgHeight(imgIndex)), CV_8UC3, (void*)GetImgArray(imgIndex));
+    // Preprocess input data
+    info("Loading image %" PRIu32 " => %s\n", imgIndex, GetFilename(imgIndex));
+    const uint8_t* currImage = GetImgArray(imgIndex);
+    // const uint8_t* currImage = (uint8_t*) (0xB0000000);
+    info("currImage = %p\n", currImage);
+
+    std::string image_data(reinterpret_cast<const char*>(currImage), IMAGE_DATA_SIZE);
+    // std::cout << "Sha256 result = " << sha256(image_data) << std::endl;
+    info(("Sha256 result = " + sha256(image_data) + "\n").c_str());
+    info(("Sha256 result = " + sha256(image_data) + "\n").c_str());
+    int currImageWidth = GetImgWidth(imgIndex);
+    int currImageHeight = GetImgHeight(imgIndex);
+    info("Image loaded: %s\n", GetFilename(imgIndex));
+    info("Image size: %d x %d\n", currImageWidth, currImageHeight);
+
+    cv::Mat originalRgbImage(cv::Size(currImageWidth, currImageHeight), CV_8UC3, (void*) currImage);
     cv::cvtColor(originalRgbImage, originalBgrImage, cv::COLOR_RGB2BGR);
 #endif
 
